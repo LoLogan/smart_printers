@@ -1,0 +1,10 @@
+*.class
+
+/*
+# ingore all but these
+!/src
+!/docs
+!.gitignore
+!README.md
+!pom.xml
+!test
