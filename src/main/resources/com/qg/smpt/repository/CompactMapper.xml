@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qg.smpt.web.repository.CompactMapper" >
+
+    <select id="selectMaxCompact" resultType="int">
+        SELECT max(compact_number)
+        FROM compact;
+    </select>
+
+    <insert id="addCompact" parameterType="com.qg.smpt.printer.Compact">
+      INSERT ignore INTO compact(compact_number, seq, order_number, printer_id)
+      VALUE (#{compact.compactNumber}, #{compact.seq}, #{compact.orderNumber}, #{compact.id})
+    </insert>
+</mapper>

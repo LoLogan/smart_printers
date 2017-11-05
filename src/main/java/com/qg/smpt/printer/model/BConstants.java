@@ -112,7 +112,9 @@ public final class BConstants {
 
     public static final double beta = 0.8;                  //用于计算信任度
 
-    public static final short startAndEnd = (short)0xBFFB;      //报文开始结束标志
+    public static final short compactStart = (short)0xBFFB;      //报文开始结束标志
+
+    public static final short compactEnd = (short)0xFBBF;      //报文开始结束标志
 
     public static final byte publishTask = (byte)0x00;      //任务发布
 

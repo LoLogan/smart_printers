@@ -9,7 +9,7 @@ public final class DebugUtil {
 
     private final static Logger LOGGER = Logger.getLogger(DebugUtil.class);
     /**
-     * 打印字节数组，每行32个字节
+     * 打印字节数组，每行4个字节
      * @param bytes
      */
     public static void printBytes(byte[] bytes) {
@@ -23,7 +23,7 @@ public final class DebugUtil {
 
             //System.out.print(stringBuffer.toString());
 
-            LOGGER.log(Level.DEBUG, "第[{0}]字节 ： [{1}]", i, stringBuffer.toString());
+            LOGGER.log(Level.DEBUG, "第[{0}]字节-第[{1}]字节 ： [{2}]", i+1, i+4,stringBuffer.toString());
         }
 
 

@@ -11,7 +11,7 @@ import java.util.Arrays;
  * Created by logan on 2017/11/4.
  */
 public class CompactModel {
-    private short start = BConstants.startAndEnd;    //起始符
+    private short start = BConstants.compactStart;    //起始符
 
     private byte type;                               //报文类型
 
@@ -37,7 +37,7 @@ public class CompactModel {
 
     private short checkSum;                         //校验和
 
-    private short end = BConstants.startAndEnd;      //结束符
+    private short end = BConstants.compactEnd;      //结束符
 
     public static void main(String[] args){
 

@@ -230,7 +230,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         // 将byteBuffer 中的字节数组进行提取
         byte[] bytes = byteBuffer.array();
 
-        DebugUtil.printBytes(bytes);
 
         if (bytes[0] == (byte)0xCF && bytes[1] == (byte)0xFC) {
             switch (bytes[2]) {
@@ -259,6 +258,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     return ;
             }
         } else if (bytes[0] == (byte)0xBF && bytes[1] == (byte)0xFB){
+            DebugUtil.printBytes(bytes);
             switch (bytes[2]) {
                 case BConstants.bid :
                     LOGGER.log(Level.DEBUG, "[投标]主控板进行投标，服务器对标书进行筛选，处理线程 thread [{0}]", this.getId());

@@ -4,10 +4,16 @@ package com.qg.smpt.printer;
 import com.qg.smpt.printer.model.BConstants;
 import com.qg.smpt.printer.model.CompactModel;
 import com.qg.smpt.share.ShareMem;
+import com.qg.smpt.util.DebugUtil;
 import com.qg.smpt.util.Level;
 import com.qg.smpt.util.Logger;
 import com.qg.smpt.web.model.Printer;
 
+import com.qg.smpt.web.repository.CompactMapper;
+import org.apache.ibatis.reflection.SystemMetaObject;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.annotation.Resource;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -18,6 +24,9 @@ import java.util.concurrent.CountDownLatch;
  * Created by logan on 2017/11/4.
  */
 public class Compact {
+
+    @Resource
+    private  CompactMapper compactMapper;
 
     private final Logger LOGGER = Logger.getLogger(PrinterProcessor.class);
 
@@ -64,8 +73,10 @@ public class Compact {
         }
 
         CountDownLatch countDownLatch = new CountDownLatch(activePrinter);
-        synchronized (ShareMem.countDownLatch) {
-            ShareMem.countDownLatch = countDownLatch;
+        if (ShareMem.countDownLatch!=null) {
+            synchronized (ShareMem.countDownLatch) {
+                ShareMem.countDownLatch = countDownLatch;
+            }
         }
         LOGGER.log(Level.DEBUG, "[招标]启用闭锁，等待所有主控板响应标书后进行标书评审");
         try {
@@ -74,6 +85,7 @@ public class Compact {
             LOGGER.log(Level.DEBUG, "[招标]闭锁等待时发生错误");
         }
 
+        LOGGER.log(Level.DEBUG, "[标书评审]所有主控板已响应标书，开始进行标书评审");
 
 
     }
