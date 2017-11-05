@@ -68,6 +68,7 @@ public final class BytesConvert {
     }
 
     public static int fillByte (byte[]srcByte, byte[] bytes, int start){
+
         System.arraycopy(srcByte, 0, bytes, start, srcByte.length);
 
         return start + srcByte.length;

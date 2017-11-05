@@ -7,6 +7,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import com.qg.smpt.printer.Compact;
 import com.qg.smpt.web.model.Constant;
 import com.qg.smpt.web.model.Json.PrinterDetail;
 import com.qg.smpt.web.repository.PrinterMapper;
@@ -124,6 +125,20 @@ public class PrinterController {
 		user.setUserPrinters(user.getUserPrinters()+1);
 		userMapper.updateByPrimaryKey(user);
 
+		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
+	}
+
+
+	/***
+	 * 发送合同网数据报文
+	 * @param
+	 * @return
+	 */
+	@RequestMapping(value="/printer/sendCompact",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@ResponseBody
+	public String sendCompact() {
+		Compact compact = new Compact();
+		compact.callForBid(1);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 }

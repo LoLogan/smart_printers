@@ -25,7 +25,7 @@ public class TestOrderBuilder {
 	
 	
 	private OrderBuilder orderBuilder;
-	
+
 	@Before
 	public void setUp() throws Exception {
 		orderBuilder = new OrderBuilder();
@@ -35,7 +35,6 @@ public class TestOrderBuilder {
 	public void tearDown() throws Exception {
 	}
 
-	@Ignore
 	@Test
 	public void test() {
 		Order o = orderBuilder.produceOrder(false,false);

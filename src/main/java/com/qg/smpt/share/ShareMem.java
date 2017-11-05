@@ -16,12 +16,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * 全局生命周期的共享对象
  * // TODO 何时注销这些对象呢?
  */
 public final class ShareMem {
+
+    public static CountDownLatch countDownLatch;
 
 	public static Integer currentOrderNum = 0;
 
@@ -55,6 +58,10 @@ public final class ShareMem {
                                                                             // 当触发一个读事件时，进行一次线程绑定，触发完毕，解除绑定
 
     public static Map<Printer, SocketChannel> priSocketMap = null;          // 打印机-socket
+
+    public static Map<Integer, Double> priCreMap = null;                    // 主控板-信任度
+
+    public static Map<Integer, Short> priSpeedMap = null;                 // 主控板-打印速度
 
     static {
         // 初始化订单ID

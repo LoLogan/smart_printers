@@ -25,7 +25,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.sql.Time;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
+import static com.qg.smpt.share.ShareMem.countDownLatch;
 import static com.qg.smpt.share.ShareMem.currentOrderNum;
 import static com.qg.smpt.share.ShareMem.priSentQueueMap;
 
@@ -256,11 +258,67 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     LOGGER.log(Level.WARN, "打印机  发送状态数据 thread [{1}] 错误", this.getId());
                     return ;
             }
+        } else if (bytes[0] == (byte)0xBF && bytes[1] == (byte)0xFB){
+            switch (bytes[2]) {
+                case BConstants.bid :
+                    LOGGER.log(Level.DEBUG, "[投标]主控板进行投标，服务器对标书进行筛选，处理线程 thread [{0}]", this.getId());
+                    parseBid(bytes, socketChannel);
+                    break;
+                case BConstants.sign :
+                    LOGGER.log(Level.DEBUG, "[签约]收到主控板的签约，处理线程 thread [{0}]", this.getId());
+                    sign(bytes, socketChannel);
+                    break;
+            }
+
         } else {
             LOGGER.log(Level.INFO, "收到无效数据");
         }
 
     }
+
+    /***
+     * 解析打印机传来的标书，计算信任度
+     * @param bytes
+     * @param socketChannel
+     */
+    private void parseBid(byte[] bytes, SocketChannel socketChannel){
+
+        CountDownLatch countDownLatch = null;
+        CompactModel compactModel = CompactModel.bytesToCompact(bytes);
+        synchronized (ShareMem.countDownLatch) {
+            if (ShareMem.countDownLatch == null)
+                LOGGER.log(Level.ERROR, "[招标]共享区无闭锁变量");
+            else
+                countDownLatch = ShareMem.countDownLatch;
+        }
+        //存储打印速度（一台主控板下的打印机数量）
+        synchronized (ShareMem.priSpeedMap) {
+            if (ShareMem.priSpeedMap == null) {
+                ShareMem.priSpeedMap = new HashMap<Integer, Short>();
+            }
+            ShareMem.priSpeedMap.put(compactModel.getId(),compactModel.getSpeed());
+        }
+
+        //获得打印机对象
+        Printer printer = ShareMem.printerIdMap.get(compactModel.getId());
+        //计算信任度
+        Double credibility = (BConstants.alpha*printer.getPrintSuccessNum()-BConstants.beta*printer.getPrintErrorNum())*compactModel.getHealth();
+        //存储信任度
+        synchronized (ShareMem.priCreMap) {
+            if (ShareMem.priCreMap == null) {
+                ShareMem.priCreMap = new HashMap<Integer, Double>();
+            }
+            ShareMem.priCreMap.put(compactModel.getId(),credibility);
+        }
+
+        LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书并计算信任度[{1}]", compactModel.getId(),credibility);
+        countDownLatch.countDown();
+    }
+
+    private void sign(byte[] bytes, SocketChannel socketChannel){
+
+    }
+
 
     /**
      * 处理打印机的连接请求, 若打印机对象未建立，则建立并初始化打印机对象

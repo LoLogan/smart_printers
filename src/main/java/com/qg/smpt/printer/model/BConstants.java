@@ -106,4 +106,24 @@ public final class BConstants {
 
     public static final byte printerNotConnect = (byte)0xFF; // 未连接
 
+    /*合同网协议变量*/
+
+    public static final double alpha = 0.5;                 //用于计算信任度
+
+    public static final double beta = 0.8;                  //用于计算信任度
+
+    public static final short startAndEnd = (short)0xBFFB;      //报文开始结束标志
+
+    public static final byte publishTask = (byte)0x00;      //任务发布
+
+    public static final byte bid = (byte)0x01;       //招标
+
+    public static final byte giveBid = (byte)0x02;          //投标
+
+    public static final byte winABid = (byte)0x03;          //中标
+
+    public static final byte sign = (byte)0x04;             //签约
+
+    public static final byte removeSign = (byte)0x05;       //解约
+
 }

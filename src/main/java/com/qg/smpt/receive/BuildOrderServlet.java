@@ -43,13 +43,13 @@ public class BuildOrderServlet extends HttpServlet {
         ReceOrderServlet receOrderServlet = new ReceOrderServlet();
         for (int i = 0; i < orderNumbers; i++) {
             Order order = OrderBuilder.produceOrder(false,false);
-            receOrderServlet.doGet(userId, order);
+            receOrderServlet.doGet(userId, order,-1);
         }
 
         for (int i = 0; i < expeNumbers; i++) {
             Order order = OrderBuilder.produceOrder(true, false);
 
-            receOrderServlet.doGet(userId, order);
+            receOrderServlet.doGet(userId, order,-1);
         }
 
 

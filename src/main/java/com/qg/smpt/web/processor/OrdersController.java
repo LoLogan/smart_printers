@@ -36,12 +36,12 @@ public class OrdersController {
             ReceOrderServlet receOrderServlet = new ReceOrderServlet();
             for (int i = 0; i < orderNumbers; i++) {
                 Order order = OrderBuilder.produceOrder(false,false,4);
-                receOrderServlet.doGet(userId, order);
+                receOrderServlet.doGet(userId, order,-1);
             }
 
             for (int i = 0; i < expe; i++) {
                 Order order = OrderBuilder.produceOrder(true,false,4);
-                receOrderServlet.doGet(userId, order);
+                receOrderServlet.doGet(userId, order,-1);
             }
         } catch (Exception e) {
 
@@ -58,12 +58,12 @@ public class OrdersController {
             ReceOrderServlet receOrderServlet = new ReceOrderServlet();
             for (int i = 0; i < correctNum; i++) {
                 Order order = OrderBuilder.produceOrder(false,false,4);
-                receOrderServlet.doGet(userId, order);
+                receOrderServlet.doGet(userId, order, -1);
             }
 
             for (int i = 0; i < exceNum; i++) {
                 Order order = OrderBuilder.produceOrder(false,true,index);
-                receOrderServlet.doGet(userId, order);
+                receOrderServlet.doGet(userId, order, -1);
             }
         } catch (Exception e) {
 
@@ -87,7 +87,7 @@ public class OrdersController {
 //                        userId = 2;
 //                    }
                     count++;
-                    receOrderServlet.doGet(userId, order);
+                    receOrderServlet.doGet(userId, order, -1);
                 }
             }
         } catch (Exception e) {

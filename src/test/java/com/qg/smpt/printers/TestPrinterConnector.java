@@ -41,13 +41,13 @@ public class TestPrinterConnector implements Runnable{
         ReceOrderServlet receOrderServlet = new ReceOrderServlet();
 
         try {
-            receOrderServlet.doGet(1, order1);
+            receOrderServlet.doGet(1, order1,-1);
 
             wait(1000);
 
-            receOrderServlet.doGet(1, orderBuilder.produceOrder(false,false));
+            receOrderServlet.doGet(1, orderBuilder.produceOrder(false,false),-1);
             wait(1000);
-            receOrderServlet.doGet(1, orderBuilder.produceOrder(false,false));
+            receOrderServlet.doGet(1, orderBuilder.produceOrder(false,false),-1);
         } catch (ServletException e) {
             e.printStackTrace();
         } catch (IOException e) {

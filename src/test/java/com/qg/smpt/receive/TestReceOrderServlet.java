@@ -20,7 +20,7 @@ public class TestReceOrderServlet {
 
         ReceOrderServlet receOrderServlet = new ReceOrderServlet();
 
-        receOrderServlet.doGet(1, order);
+        receOrderServlet.doGet(1, order,-1);
 
         //System.out.println(order.toString());
     }
