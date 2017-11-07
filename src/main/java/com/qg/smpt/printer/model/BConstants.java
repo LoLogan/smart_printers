@@ -120,11 +120,11 @@ public final class BConstants {
 
     public static final byte bid = (byte)0x01;       //招标
 
-    public static final byte giveBid = (byte)0x02;          //投标
+//    public static final byte giveBid = (byte)0x03;          //投标
 
-    public static final byte winABid = (byte)0x03;          //中标
+    public static final byte winABid = (byte)0x02;          //中标
 
-    public static final byte sign = (byte)0x04;             //签约
+    public static final byte sign = (byte)0x03;             //签约
 
     public static final byte removeSign = (byte)0x05;       //解约
 

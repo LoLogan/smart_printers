@@ -11,10 +11,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 /**
  * Created by tisong on 7/20/16.
@@ -178,6 +175,8 @@ public class PrinterConnector implements Runnable, Lifecycle{
                 LOGGER.log(Level.ERROR, "暂时可忽略的错误 serverSocketChannel ", e);
                 if (sc != null && sc.isOpen()) {
                     try {
+                        Collection<SocketChannel> col = ShareMem.priSocketMap.values();
+                        col.remove(sc);
                         sc.close();
                     } catch (IOException ee) {
                         LOGGER.log(Level.ERROR, "socket close exception", ee);

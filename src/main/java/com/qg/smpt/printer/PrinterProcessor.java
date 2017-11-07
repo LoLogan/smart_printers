@@ -27,8 +27,8 @@ import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
-import static com.qg.smpt.share.ShareMem.countDownLatch;
-import static com.qg.smpt.share.ShareMem.currentOrderNum;
+
+
 import static com.qg.smpt.share.ShareMem.priSentQueueMap;
 
 
@@ -283,19 +283,9 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      */
     private void parseBid(byte[] bytes, SocketChannel socketChannel){
 
-        CountDownLatch countDownLatch = null;
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
-        synchronized (ShareMem.countDownLatch) {
-            if (ShareMem.countDownLatch == null)
-                LOGGER.log(Level.ERROR, "[招标]共享区无闭锁变量");
-            else
-                countDownLatch = ShareMem.countDownLatch;
-        }
         //存储打印速度（一台主控板下的打印机数量）
         synchronized (ShareMem.priSpeedMap) {
-            if (ShareMem.priSpeedMap == null) {
-                ShareMem.priSpeedMap = new HashMap<Integer, Short>();
-            }
             ShareMem.priSpeedMap.put(compactModel.getId(),compactModel.getSpeed());
         }
 
@@ -305,18 +295,19 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         Double credibility = (BConstants.alpha*printer.getPrintSuccessNum()-BConstants.beta*printer.getPrintErrorNum())*compactModel.getHealth();
         //存储信任度
         synchronized (ShareMem.priCreMap) {
-            if (ShareMem.priCreMap == null) {
-                ShareMem.priCreMap = new HashMap<Integer, Double>();
-            }
             ShareMem.priCreMap.put(compactModel.getId(),credibility);
+        }
+        //计算存储代价 并存储打印代价
+        synchronized (ShareMem.priPriceMap) {
+            ShareMem.priCreMap.put(compactModel.getId(),credibility * compactModel.getSpeed());
         }
 
         LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书并计算信任度[{1}]", compactModel.getId(),credibility);
-        countDownLatch.countDown();
+
     }
 
     private void sign(byte[] bytes, SocketChannel socketChannel){
-
+        CompactModel compactModel = CompactModel.bytesToCompact(bytes);
     }
 
 

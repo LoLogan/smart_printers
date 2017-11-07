@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch;
  */
 public final class ShareMem {
 
-    public static CountDownLatch countDownLatch;
+
 
 	public static Integer currentOrderNum = 0;
 
@@ -55,13 +55,21 @@ public final class ShareMem {
     public static Map<Printer, List<BulkOrder>> priBufferMapList = null;    // 打印机-待发送批次队列
 
     public static Map<Printer, PrinterProcessor> priPriProcessMap = null;   // 打印机对应的处理线程, 做成动态效果。
+
                                                                             // 当触发一个读事件时，进行一次线程绑定，触发完毕，解除绑定
 
     public static Map<Printer, SocketChannel> priSocketMap = null;          // 打印机-socket
 
+    /***
+     * 合同网下新增共享变量
+     */
     public static Map<Integer, Double> priCreMap = null;                    // 主控板-信任度
 
     public static Map<Integer, Short> priSpeedMap = null;                 // 主控板-打印速度
+
+    public static Map<Integer, Double> priPriceMap = null;                 // 主控板-打印代价
+
+    public static Map<Printer, BulkOrder> priBulkMap = null;        // 主控板-打印批次
 
     static {
         // 初始化订单ID
@@ -84,6 +92,15 @@ public final class ShareMem {
         priPriProcessMap = new HashMap<Printer, PrinterProcessor>();
 
         priSocketMap = new HashMap<Printer, SocketChannel>();
+
+        priCreMap = new HashMap<Integer, Double>();
+
+        priSpeedMap = new HashMap<Integer, Short>();
+
+        priPriceMap = new HashMap<Integer, Double>();
+
+        priBulkMap = new HashMap<Printer, BulkOrder>();
+
     }
 
     private static void initOrderId() {
