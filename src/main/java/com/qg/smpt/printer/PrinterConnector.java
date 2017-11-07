@@ -148,7 +148,7 @@ public class PrinterConnector implements Runnable, Lifecycle{
                             // 1. 连接后的一个请求：将打印机id-主控板（用户）id绑定，将打印机id-SocketChannel绑定
                             LOGGER.debug("ServerSocket accpet printer read request");
                             sc = (SocketChannel) key.channel();
-                            ByteBuffer byteBuffer = ByteBuffer.allocate(20);
+                            ByteBuffer byteBuffer = ByteBuffer.allocate(32);
                             byteBuffer.clear();
                             /* 检测socket 客户端是否关闭 */
                             int nRead = sc.read(byteBuffer);

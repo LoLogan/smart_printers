@@ -22,10 +22,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 import static java.lang.Thread.sleep;
@@ -76,16 +73,21 @@ public class Compact {
             System.out.println("--------------");
         }
 
-
     }
 
     /***
-     * 合同网发送订单
+     * 合同网委派订单
+     * 1. 服务端收到订单列表，即向已连接的空闲的主控板发送招标通知
+     * 2. 服务端收到主控板的投标，计算并存储各主控板的信任度，打印速度，打印代价（在PrinterProcessor的parseBid方法）
+     * 3. 进行标书的评审，与主控板进行签约，即按照策略将一些订单分发给投标的主控板
+     * 4. 主控板进行签约确认并进行订单的下发（在PrinterProcessor的sign方法中体现）
      * @param urg
      */
     public void sendOrders(int urg, List<Order> orders){
+
         callForBid(urg);
 
+        //投标的策略为：只限定主控板在某一时间内发送标书，逾期不候
         try {
             sleep(2000);
         } catch (InterruptedException e) {
@@ -119,12 +121,14 @@ public class Compact {
 
         ByteBuffer byteBuffer = ByteBuffer.wrap(compactBytes);
 
+        LOGGER.log(Level.DEBUG, "[招标]向主控板发送招标合同网报文");
         for (Map.Entry<Printer, SocketChannel> entry : ShareMem.priSocketMap.entrySet()){
             //当该主控板处于闲时状态时可向其发送合同网报文
             if (!entry.getKey().isBusy()) {
                 SocketChannel socketChannel = entry.getValue();
                 try {
                     socketChannel.write(byteBuffer);
+                    LOGGER.log(Level.DEBUG, "[招标]成功向主控板[{0}]发送合同网报文",entry.getKey().getId());
                 } catch (IOException e) {
                     LOGGER.log(Level.ERROR, "[招标]发送合同网报文发生错误");
                 }
@@ -154,7 +158,7 @@ public class Compact {
                 ShareMem.priBulkMap.put(printer,bOrders);
             }
 
-            int bulkLength = bOrders.getDataSize()+32;
+            int bulkLength = bOrders.getDataSize();
 
             //构建合同网中标报文
             CompactModel compactModel = new CompactModel();
@@ -174,6 +178,7 @@ public class Compact {
             SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
             try {
                 socketChannel.write(byteBuffer);
+                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{0}]",printer.getId(),orders.size());
             } catch (IOException e) {
                 LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
             }
@@ -201,7 +206,7 @@ public class Compact {
                     ShareMem.priBulkMap.put(printer,bOrders);
                 }
 
-                int bulkLength = bOrders.getDataSize()+32;
+                int bulkLength = bOrders.getDataSize();
 
 
                 //构建合同网中标报文
@@ -222,6 +227,7 @@ public class Compact {
                 SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
                 try {
                     socketChannel.write(byteBuffer);
+                    LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{0}]",printer.getId(),smallOrders.size());
                 } catch (IOException e) {
                     LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
                 }

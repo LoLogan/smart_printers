@@ -302,12 +302,33 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             ShareMem.priCreMap.put(compactModel.getId(),credibility * compactModel.getSpeed());
         }
 
-        LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书并计算信任度[{1}]", compactModel.getId(),credibility);
+        LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书，打印速度为[{1}],计算信任度[{2}]", compactModel.getId(),compactModel.getSpeed(),credibility);
 
     }
 
+    /***
+     * 主控板确认与服务端的签约，服务端进行订单的下发
+     * @param bytes
+     * @param socketChannel
+     */
     private void sign(byte[] bytes, SocketChannel socketChannel){
+
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
+        LOGGER.log(Level.DEBUG, "[签约确认]收到主控板[{0}]的签约确认，准备向其发送订单数据", compactModel.getId());
+
+        int id = compactModel.getId();
+        BulkOrder bulkOrder = ShareMem.priBulkMap.get(id);
+        //引用以前的批次报文，但是只用里边的data属性，data即是这个批次的订单报文数据
+        BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bulkOrder, false);
+        byte[] data = bBulkOrder.data;
+        ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+
+        try {
+            socketChannel.write(byteBuffer);
+        } catch (final IOException e) {
+            LOGGER.log(Level.ERROR, "[确认签约]发放任务时发生错误");
+        }
+
     }
 
 
@@ -402,10 +423,10 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 printer.getPrinterStatus(), printer.getUserId());
 
 
-        if (ShareMem.priSocketMap.get(printer) == null) {
+//        if (ShareMem.priSocketMap.get(printer) == null) {
             ShareMem.priSocketMap.put(printer, socketChannel);
             LOGGER.log(Level.DEBUG, "建立打印机[{0}] 与 socketChannel对象关联", printerId);
-        }
+//        }
 
         // TODO printer 锁是否有用
         /* 锁住 printer 打印机对象，避免出现创建多次队列现象*/
