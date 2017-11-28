@@ -34,4 +34,14 @@ public class CompactMapperTest {
         System.out.println(compactMapper.addCompact(compactModel));
     }
 
+    @Test
+    public void updatePrinter() throws Exception {
+        compactMapper.updatePrinter(2,2.5,3,4.3);
+    }
+
+    @Test
+    public void getPriById() throws Exception {
+        System.out.println(compactMapper.getCreById(2));
+        System.out.println(compactMapper.getPriById(2));
+    }
 }

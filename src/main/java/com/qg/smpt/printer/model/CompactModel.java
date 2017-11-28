@@ -21,11 +21,13 @@ public class CompactModel {
 
     private short compactNumber;                     //合同号
 
-    private short seq;                              //合同子序号
+    private short padding0;                           //保留
 
-    private short orderNumber;                      //订单个数
+    private short seq;                              //合同子序号             暂时不用
 
-    private short bulklength;                       //批次长度
+    private short orderNumber;                      //订单个数              暂时不用
+
+    private short bulklength;                       //批次长度              暂时不用
 
     private int id;                              //主控板id
 
@@ -57,14 +59,19 @@ public class CompactModel {
         compactModel.setSeconds(BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 4, 8)));
 
         compactModel.setCompactNumber(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 8, 10)));
-        compactModel.setSeq(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 10, 12)));
-        compactModel.setOrderNumber(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 12, 14)));
-        compactModel.setBulklength(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 14, 16)));
-        compactModel.setId(BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 16, 20)));
-        compactModel.setSpeed(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 20, 22)));
-        compactModel.setHealth(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 22, 24)));
-        compactModel.setPadding(BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 24, 28)));
-        compactModel.setCheckSum(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 28, 30)));
+
+        compactModel.setPadding0(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 10, 12)));
+
+
+        compactModel.setId(BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 12, 16)));
+
+        compactModel.setSpeed(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 16, 18)));
+
+        compactModel.setHealth(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 18, 20)));
+
+        compactModel.setPadding(BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 20, 24)));
+
+        compactModel.setCheckSum(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 24, 26)));
 
 
         return compactModel;
@@ -77,7 +84,7 @@ public class CompactModel {
      * @return
      */
     public static byte[] compactToBytes(CompactModel compactModel) {
-        byte[] bytes = new byte[32];
+        byte[] bytes = new byte[28];
 
         int position = 0;
 
@@ -93,11 +100,7 @@ public class CompactModel {
 
         position = BytesConvert.fillShort(compactModel.compactNumber, bytes, position);
 
-        position = BytesConvert.fillShort(compactModel.seq, bytes, position);
-
-        position = BytesConvert.fillShort(compactModel.orderNumber, bytes, position);
-
-        position = BytesConvert.fillShort(compactModel.bulklength, bytes, position);
+        position = BytesConvert.fillShort(compactModel.padding0, bytes, position);
 
         position = BytesConvert.fillInt(compactModel.id, bytes, position);
 
@@ -118,21 +121,33 @@ public class CompactModel {
     public CompactModel() {
     }
 
-    public CompactModel(short start, byte type, byte urg, int seconds, short compactNumber, short seq, short orderNumber, short bulklength, int id, short speed, short health, int padding, short checkSum, short end) {
-        this.start = start;
-        this.type = type;
-        this.urg = urg;
-        this.seconds = seconds;
-        this.compactNumber = compactNumber;
-        this.seq = seq;
-        this.orderNumber = orderNumber;
-        this.bulklength = bulklength;
-        this.id = id;
-        this.speed = speed;
-        this.health = health;
-        this.padding = padding;
-        this.checkSum = checkSum;
-        this.end = end;
+    @Override
+    public String toString() {
+        return "CompactModel{" +
+                "start=" + start +
+                ", type=" + type +
+                ", urg=" + urg +
+                ", seconds=" + seconds +
+                ", compactNumber=" + compactNumber +
+                ", padding0=" + padding0 +
+                ", seq=" + seq +
+                ", orderNumber=" + orderNumber +
+                ", bulklength=" + bulklength +
+                ", id=" + id +
+                ", speed=" + speed +
+                ", health=" + health +
+                ", padding=" + padding +
+                ", checkSum=" + checkSum +
+                ", end=" + end +
+                '}';
+    }
+
+    public short getPadding0() {
+        return padding0;
+    }
+
+    public void setPadding0(short padding0) {
+        this.padding0 = padding0;
     }
 
     public short getStart() {

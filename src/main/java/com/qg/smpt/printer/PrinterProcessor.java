@@ -3,14 +3,12 @@ package com.qg.smpt.printer;
 import com.qg.smpt.printer.model.*;
 import com.qg.smpt.receive.ReceOrderServlet;
 import com.qg.smpt.share.ShareMem;
-import com.qg.smpt.util.DebugUtil;
-import com.qg.smpt.util.Level;
-import com.qg.smpt.util.Logger;
-import com.qg.smpt.util.TimeUtil;
+import com.qg.smpt.util.*;
 import com.qg.smpt.web.model.BulkOrder;
 import com.qg.smpt.web.model.Order;
 import com.qg.smpt.web.model.Printer;
 import com.qg.smpt.web.model.User;
+import com.qg.smpt.web.repository.CompactMapper;
 import com.qg.smpt.web.repository.OrderMapper;
 import com.qg.smpt.web.repository.PrinterMapper;
 import com.qg.smpt.web.repository.UserMapper;
@@ -28,7 +26,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 
-
+import static com.qg.smpt.share.ShareMem.compactPrinter;
 import static com.qg.smpt.share.ShareMem.priSentQueueMap;
 
 
@@ -242,6 +240,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     parseOkStatus(bytes, socketChannel);
                     break;
                 case BConstants.orderStatus:
+                    DebugUtil.printBytes(bytes);
                     LOGGER.log(Level.DEBUG, "打印机 接收订单状态数据 thread [{0}] ", this.getId());
                     parseOrderStatus(bytes, socketChannel);
                     break;
@@ -249,10 +248,12 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     LOGGER.log(Level.DEBUG, "打印机 接收批次状态数据 thread [{0}] ", this.getId());
                     parseBulkStatus(bytes);
                     break;
+                /*
                 case BConstants.printStatus:
                     parsePrinterStatus(bytes);
                     LOGGER.log(Level.DEBUG, "打印机 接收打印机状态数据 thread [{1}] ", this.getId());
                     break;
+                    */
                 default:
                     LOGGER.log(Level.WARN, "打印机  发送状态数据 thread [{1}] 错误", this.getId());
                     return ;
@@ -268,6 +269,9 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     LOGGER.log(Level.DEBUG, "[签约]收到主控板的签约，处理线程 thread [{0}]", this.getId());
                     sign(bytes, socketChannel);
                     break;
+                case BConstants.removeSign :
+                    LOGGER.log(Level.DEBUG, "[确认解约]收到主控板的确认解约，处理线程 thread [{0}]", this.getId());
+                    removeSign(bytes);
             }
 
         } else {
@@ -277,11 +281,23 @@ public class PrinterProcessor implements Runnable, Lifecycle{
     }
 
     /***
+     * 确认解约
+     * @param bytes
+     */
+    private void removeSign(byte[] bytes){
+        CompactModel compactModel = CompactModel.bytesToCompact(bytes);
+        synchronized (ShareMem.compactPrinter) {
+           ShareMem.compactPrinter.remove(compactModel.getCompactNumber());
+        }
+    }
+
+    /***
      * 解析打印机传来的标书，计算信任度
      * @param bytes
      * @param socketChannel
      */
     private void parseBid(byte[] bytes, SocketChannel socketChannel){
+        double price;
 
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
         //存储打印速度（一台主控板下的打印机数量）
@@ -292,18 +308,36 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         //获得打印机对象
         Printer printer = ShareMem.printerIdMap.get(compactModel.getId());
         //计算信任度
-        Double credibility = (BConstants.alpha*printer.getPrintSuccessNum()-BConstants.beta*printer.getPrintErrorNum())*compactModel.getHealth();
+        Double credibility =(BConstants.initialCre + BConstants.alpha*printer.getPrintSuccessNum()-BConstants.beta*printer.getPrintErrorNum())*compactModel.getHealth();
         //存储信任度
         synchronized (ShareMem.priCreMap) {
             ShareMem.priCreMap.put(compactModel.getId(),credibility);
         }
         //计算存储代价 并存储打印代价
         synchronized (ShareMem.priPriceMap) {
-            ShareMem.priCreMap.put(compactModel.getId(),credibility * compactModel.getSpeed());
+            price = credibility * compactModel.getSpeed();
+            ShareMem.priPriceMap.put(compactModel.getId(),price);
         }
+        //将进行投标的主控板进行存储
+        synchronized (ShareMem.compactPrinter) {
+            List<Printer> printers = ShareMem.compactPrinter.get(compactModel.getCompactNumber());
+            printers.add(printer);
+        }
+
 
         LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书，打印速度为[{1}],计算信任度[{2}]", compactModel.getId(),compactModel.getSpeed(),credibility);
 
+
+        SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        CompactMapper compactMapper = sqlSession.getMapper(CompactMapper.class);
+
+        try {
+            compactMapper.updatePrinter(compactModel.getId(),credibility,compactModel.getSpeed(),price);
+        }finally {
+            sqlSession.commit();
+            sqlSession.close();
+        }
     }
 
     /***
@@ -317,14 +351,15 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         LOGGER.log(Level.DEBUG, "[签约确认]收到主控板[{0}]的签约确认，准备向其发送订单数据", compactModel.getId());
 
         int id = compactModel.getId();
-        BulkOrder bulkOrder = ShareMem.priBulkMap.get(id);
+        BulkOrder bulkOrder = ShareMem.priBulkMap.get(ShareMem.printerIdMap.get(id));
         //引用以前的批次报文，但是只用里边的data属性，data即是这个批次的订单报文数据
         BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bulkOrder, false);
-        byte[] data = bBulkOrder.data;
-        ByteBuffer byteBuffer = ByteBuffer.wrap(data);
+        byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
+        ByteBuffer byteBuffer = ByteBuffer.wrap(bBulkOrderBytes);
 
         try {
             socketChannel.write(byteBuffer);
+            LOGGER.log(Level.DEBUG, "[确认签约]发放任务时成功");
         } catch (final IOException e) {
             LOGGER.log(Level.ERROR, "[确认签约]发放任务时发生错误");
         }
@@ -352,8 +387,13 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
         // 建立用户-printer 关系
         Printer printer = ShareMem.printerIdMap.get(printerId);
+
+
+
         if (printer != null){
+            ShareMem.priSocketMap.put(printer, socketChannel);
             LOGGER.log(Level.WARN, "共享对象中已存在打印机[{0}]与打印机对象", printerId);
+            LOGGER.log(Level.DEBUG, "重新建立打印机[{0}] 与 socketChannel对象关联", printerId);
             return ;
         }
 
@@ -419,14 +459,12 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             ShareMem.printerIdMap.put(printerId, printer);
         }
 
+        ShareMem.priSocketMap.put(printer, socketChannel);
+        LOGGER.log(Level.DEBUG, "建立打印机[{0}] 与 socketChannel对象关联", printerId);
+
         LOGGER.log(Level.DEBUG, "将打印机[{0}]并为建立打印对象；打印机状态:[{1}];用户:[{2}]", printerId,
                 printer.getPrinterStatus(), printer.getUserId());
 
-
-//        if (ShareMem.priSocketMap.get(printer) == null) {
-            ShareMem.priSocketMap.put(printer, socketChannel);
-            LOGGER.log(Level.DEBUG, "建立打印机[{0}] 与 socketChannel对象关联", printerId);
-//        }
 
         // TODO printer 锁是否有用
         /* 锁住 printer 打印机对象，避免出现创建多次队列现象*/
@@ -465,14 +503,14 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      * @param socketChannel
      */
     private synchronized void parseOkStatus(byte[] bytes, SocketChannel socketChannel) {
-    	// 解析OK请求
+        // 解析OK请求
         BRequest request = BRequest.bytesToRequest(bytes);
 
         // 获取打印机主控板id,获取打印机
         int printerId = request.printerId;
 
         LOGGER.log(Level.DEBUG, "解析请求打印机请求id:[{0}], flag:[{1}]," +
-                "seconds:[{2}];checksum [{3}]; 当前线程 [{4}]" + request.printerId, request.flag, request.seconds,
+                        "seconds:[{2}];checksum [{3}]; 当前线程 [{4}]" + request.printerId, request.flag, request.seconds,
                 request.checkSum, this.id);
 
         Printer p = ShareMem.printerIdMap.get(printerId);
@@ -619,11 +657,13 @@ public class PrinterProcessor implements Runnable, Lifecycle{
     private void parseOrderStatus(byte[] bytes, SocketChannel socketChannel) {
         BOrderStatus bOrderStatus = BOrderStatus.bytesToOrderStatus(bytes);
 
+        byte flag = (byte)(bOrderStatus.flag  & 0xFF);
+
         LOGGER.log(Level.DEBUG, "打印机id [{0}], 订单标志 : [{1}] , 订单发送时间戳 : [{2}], " +
-                "所属批次[{3}], 批次内序号 [{4}], 校验和 [{5}] 当前线程 [{6}]", bOrderStatus.printerId, bOrderStatus.flag,
+                        "所属批次[{3}], 批次内序号 [{4}], 校验和 [{5}] 当前线程 [{6}]", bOrderStatus.printerId, flag,
                 bOrderStatus.seconds, bOrderStatus.bulkId, bOrderStatus.inNumber, bOrderStatus.checkSum, this.id);
 
-        byte flag = (byte)(bOrderStatus.flag  & 0xFF);
+//        byte flag = (byte)(bOrderStatus.flag  & 0xFF);
 
         Printer printer = ShareMem.printerIdMap.get(bOrderStatus.printerId);
 
@@ -764,12 +804,12 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
             long resendTime = System.currentTimeMillis();
             LOGGER.log(Level.INFO, "打印机 [{0}] 重新发送批次 [{1}] 中的异常订单 [{2}] ，当前时间为 [{3}] 距离接受到异常报告时" +
-                    "所过去的时间为 [{4}] ms", bOrderStatus.printerId, bulkOrderF.getId(),bOrderStatus.inNumber,
+                            "所过去的时间为 [{4}] ms", bOrderStatus.printerId, bulkOrderF.getId(),bOrderStatus.inNumber,
                     TimeUtil.timeToString(resendTime), resendTime - time);
 
         } else if ( flag == BConstants.orderSucc ) {
             bulkOrderF.increaseReceNum();
-            
+
             LOGGER.log(Level.DEBUG, "订单处理成功 当前线程 [{1}]", this.id);
             order.setOrderStatus(Integer.valueOf(BConstants.orderSucc).toString());
 
@@ -837,7 +877,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 bBulkStatus.seconds, bBulkStatus.checkSum, this.id);
 
         if ( (byte)(bBulkStatus.flag  & 0xFF) == (byte) BConstants.bulkSucc) {
-        	// 批次订单成功
+            // 批次订单成功
             // 将已发队列中数据装填到数据库中，并清除已发队列
             LOGGER.log(Level.DEBUG, "打印机 [{0}] 处理批次订单成功 [{1}]  printerProcessor 线程 [{2}]", bBulkStatus.printerId,
                     bBulkStatus.bulkId, this.id);
@@ -879,7 +919,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 //            }
 
         } else if ( (byte)(bBulkStatus.flag  & 0xFF) == (byte) BConstants.bulkInBuffer) {
-        	// 批次进入缓冲区 超时重新传送
+            // 批次进入缓冲区 超时重新传送
             LOGGER.log(Level.DEBUG, "暂未处理批次订进入缓冲区 当前线程[{0}]", this.id);
         } else if ( (byte)(bBulkStatus.flag & 0xFF) == (byte) BConstants.bulkFail) {
             LOGGER.log(Level.DEBUG, "暂未处理批次订错误 当前线程[{0}]", this.id);

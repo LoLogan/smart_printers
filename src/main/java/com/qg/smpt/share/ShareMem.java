@@ -4,6 +4,7 @@ import com.qg.smpt.printer.PrinterProcessor;
 import com.qg.smpt.web.model.*;
 import com.qg.smpt.web.repository.OrderMapper;
 import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.javassist.bytecode.annotation.ShortMemberValue;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
@@ -69,7 +70,9 @@ public final class ShareMem {
 
     public static Map<Integer, Double> priPriceMap = null;                 // 主控板-打印代价
 
-    public static Map<Printer, BulkOrder> priBulkMap = null;        // 主控板-打印批次
+    public static Map<Printer, BulkOrder> priBulkMap = null;                // 主控板-打印批次
+
+    public static Map<Short, List<Printer>> compactPrinter = null;        //合同号-参与此合同的主控板
 
     static {
         // 初始化订单ID
@@ -100,6 +103,8 @@ public final class ShareMem {
         priPriceMap = new HashMap<Integer, Double>();
 
         priBulkMap = new HashMap<Printer, BulkOrder>();
+
+        compactPrinter = new HashMap<Short, List<Printer>>();
 
     }
 

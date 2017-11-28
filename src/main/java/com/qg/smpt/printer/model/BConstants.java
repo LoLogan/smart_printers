@@ -107,6 +107,7 @@ public final class BConstants {
     public static final byte printerNotConnect = (byte)0xFF; // 未连接
 
     /*合同网协议变量*/
+    public static final int initialCre = 5;                 //初始信任度
 
     public static final double alpha = 0.5;                 //用于计算信任度
 
@@ -126,6 +127,9 @@ public final class BConstants {
 
     public static final byte sign = (byte)0x03;             //签约
 
-    public static final byte removeSign = (byte)0x05;       //解约
+
+    public static final byte removeSignRequest = (byte)0x04;       //请求解约
+
+    public static final byte removeSign = (byte)0x05;       //解约确认
 
 }

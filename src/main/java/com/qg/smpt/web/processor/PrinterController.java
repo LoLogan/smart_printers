@@ -1,5 +1,6 @@
 package com.qg.smpt.web.processor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import com.qg.smpt.printer.Compact;
+import com.qg.smpt.util.OrderBuilder;
 import com.qg.smpt.web.model.Constant;
 import com.qg.smpt.web.model.Json.PrinterDetail;
 import com.qg.smpt.web.repository.PrinterMapper;
@@ -32,7 +34,7 @@ import com.qg.smpt.web.service.UserService;
 @Controller
 public class PrinterController {
 	private static final Logger LOGGER = Logger.getLogger(PrinterController.class);
-	
+
 	@Autowired
 	private UserService userService;
 
@@ -45,15 +47,15 @@ public class PrinterController {
 	@RequestMapping(value="/printer/{userId}", method=RequestMethod.GET, produces="application/json;charset=UTF-8")
 	@ResponseBody
 	public String seePrinterStatus(@PathVariable int userId) {
-		
+
 		// 从session中获取用户
 //		HttpSession session = request.getSession();
 //		User user = (User) session.getAttribute("user");
 //		int userId = ((user != null) ? user.getId() : 0);
-		
-		
+
+
 		LOGGER.log(Level.DEBUG, "查看用户[{0}]的打印机状态 ", userId);
-		
+
 		// 根据用户id获取打印机
 		User user = ShareMem.userIdMap.get(userId);
 		List<Printer> printers = null;
@@ -62,18 +64,18 @@ public class PrinterController {
 			user = userService.queryUserPrinter(userId);
 
 			if(user != null && user.getPrinters() != null){
-                synchronized (ShareMem.userIdMap) {
-                    ShareMem.userIdMap.put(user.getId(), user);
-                }
+				synchronized (ShareMem.userIdMap) {
+					ShareMem.userIdMap.put(user.getId(), user);
+				}
 			}
 		}
 
 		printers = user.getPrinters();
-		String json = JsonUtil.jsonToMap(new String[]{"retcode","data"}, 
+		String json = JsonUtil.jsonToMap(new String[]{"retcode","data"},
 				new Object[]{1 ,printers});
-		
+
 		LOGGER.log(Level.DEBUG, "当前转化的信息为 [{0}]", json);
-		
+
 		return json;
 	}
 
@@ -134,11 +136,45 @@ public class PrinterController {
 	 * @param
 	 * @return
 	 */
-	@RequestMapping(value="/printer/sendCompact",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@RequestMapping(value="/printer/sendCompact/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
 	@ResponseBody
-	public String sendCompact() {
+	public String sendCompact(@PathVariable int number) {
 		Compact compact = new Compact();
-		compact.callForBid(1);
+		List<Order> orders = new ArrayList<Order>();
+		for (int i = 0; i<number; i++){
+			orders.add(OrderBuilder.produceOrder(false,false));
+		}
+		compact.sendOrders(1,orders);
+		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
+	}
+
+	/***
+	 * 直接发送数据报文
+	 * @param
+	 * @return
+	 */
+	@RequestMapping(value="/printer/sendBulk/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@ResponseBody
+	public String sendBulk(@PathVariable int number) {
+		Compact compact = new Compact();
+		List<Order> orders = new ArrayList<Order>();
+		for (int i = 0; i<number; i++){
+			orders.add(OrderBuilder.produceOrder(false,false));
+		}
+		compact.sendBulk(orders,1);
+		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
+	}
+
+	/***
+	 * 直接解约数据报文
+	 * @param
+	 * @return
+	 */
+	@RequestMapping(value="/printer/remove/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@ResponseBody
+	public String removeSign(@PathVariable int number) {
+		Compact compact = new Compact();
+		compact.removeSign(number);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 }

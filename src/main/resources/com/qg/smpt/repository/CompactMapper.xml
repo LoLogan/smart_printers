@@ -8,7 +8,35 @@
     </select>
 
     <insert id="addCompact" parameterType="com.qg.smpt.printer.Compact">
-      INSERT ignore INTO compact(compact_number, seq, order_number, printer_id)
+      INSERT INTO compact(compact_number, seq, order_number, printer_id)
       VALUE (#{compact.compactNumber}, #{compact.seq}, #{compact.orderNumber}, #{compact.id})
     </insert>
+
+    <update id="updatePrinter">
+        UPDATE printer
+        <set>
+            <if test="credibility != null">
+                credibility = #{credibility},
+            </if>
+            <if test="speed != null ">
+                 speed = #{speed},
+            </if>
+            <if test="price != null ">
+                 price = #{price}
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="getCreById" resultType="double">
+        SELECT credibility
+        FROM printer
+        WHERE id = #{id};
+    </select>
+
+    <select id="getPriById" resultType="double">
+        SELECT price
+        FROM printer
+        WHERE id = #{id};
+    </select>
 </mapper>
