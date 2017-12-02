@@ -68,17 +68,11 @@ public class OrderController {
 				}
 				orders.addAll(order);
 
-				notify();
+				ShareMem.userOrderBufferMap.get(userId).notify();
 			}
-//			int number = order.size();
-//			Compact compact = new Compact();
-//
-//			if (number > 10){
-//				compact.sendOrders(1,order);
-//			}else {
-//				compact.sendBulk(order,1);
-//			}
+
 		}catch (Exception e){
+			e.printStackTrace();
 			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"ERROR"});
 		}
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});

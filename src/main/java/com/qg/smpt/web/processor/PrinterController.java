@@ -144,7 +144,7 @@ public class PrinterController {
 		for (int i = 0; i<number; i++){
 			orders.add(OrderBuilder.produceOrder(false,false));
 		}
-		compact.sendOrders(1,orders);
+		compact.sendOrdersByCompact(1,orders);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 
@@ -161,7 +161,7 @@ public class PrinterController {
 		for (int i = 0; i<number; i++){
 			orders.add(OrderBuilder.produceOrder(false,false));
 		}
-		compact.sendBulk(orders,1);
+		compact.sendBulkDitectly(1,orders);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 

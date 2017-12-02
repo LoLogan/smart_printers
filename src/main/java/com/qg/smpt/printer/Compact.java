@@ -56,7 +56,7 @@ public class Compact {
      * 4. 主控板进行签约确认并进行订单的下发（在PrinterProcessor的sign方法中体现）
      * @param urg
      */
-    public void sendOrders(int urg, List<Order> orders){
+    public void sendOrdersByCompact(int urg, List<Order> orders){
 
         SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
         SqlSession sqlSession = sqlSessionFactory.openSession();
@@ -271,7 +271,7 @@ public class Compact {
      * @param orders
      * @param urg
      */
-    public void sendBulk(List<Order> orders,int urg){
+    public void sendBulkDitectly(int urg,List<Order> orders){
         updatePrinterMsg();
         LOGGER.log(Level.DEBUG, "[批次]直接发送批次订单数据");
         int printerId = getPrinterIdByMaxCreForBulk();                //获取信任度最大的打印机编号
