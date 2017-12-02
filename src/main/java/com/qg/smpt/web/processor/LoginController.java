@@ -5,13 +5,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.qg.smpt.printer.OrdersDispatcher;
 import com.sun.deploy.net.HttpResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import com.qg.smpt.share.ShareMem;
 import com.qg.smpt.util.JsonUtil;
@@ -83,6 +81,10 @@ public class LoginController {
 		if(status.equals(Constant.SUCCESS)) {
 			 HttpSession session = request.getSession();
 			 session.setAttribute("user", loginUser);
+			//给用户订单委派器，用于循环查看当前的订单存量,直到session为止
+			OrdersDispatcher ordersDispatcher = new OrdersDispatcher(loginUser.getId());
+			ordersDispatcher.threadStart();
+			ShareMem.userIdOrdersDispatcher.put(loginUser.getId(),ordersDispatcher);
 
 			Cookie cookie = new Cookie("user_id", loginUser.getId().toString());
 			cookie.setPath("/");
@@ -114,5 +116,12 @@ public class LoginController {
 	
 	private boolean checkInput(User user) {
 		return true;
+	}
+
+	@RequestMapping(value="/exit/{userId}", method=RequestMethod.GET, produces="application/html;charset=utf-8" )
+	public String exit(@PathVariable int userId, HttpServletRequest request) {
+		HttpSession session = request.getSession();
+		session.invalidate();
+		return JsonUtil.jsonToMap(new String[]{"state"}, new Object[]{"success"});
 	}
 }

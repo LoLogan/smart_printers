@@ -1,5 +1,6 @@
 package com.qg.smpt.share;
 
+import com.qg.smpt.printer.OrdersDispatcher;
 import com.qg.smpt.printer.PrinterProcessor;
 import com.qg.smpt.web.model.*;
 import com.qg.smpt.web.repository.OrderMapper;
@@ -74,6 +75,8 @@ public final class ShareMem {
 
     public static Map<Short, List<Printer>> compactPrinter = null;        //合同号-参与此合同的主控板
 
+    public static Map<Integer, OrdersDispatcher> userIdOrdersDispatcher = null;   //用户id和对应的订单委派调度线程
+
     static {
         // 初始化订单ID
         initOrderId();
@@ -105,6 +108,8 @@ public final class ShareMem {
         priBulkMap = new HashMap<Printer, BulkOrder>();
 
         compactPrinter = new HashMap<Short, List<Printer>>();
+
+        userIdOrdersDispatcher = new HashMap<Integer,OrdersDispatcher>();
 
     }
 

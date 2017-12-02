@@ -11,6 +11,9 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import com.qg.smpt.printer.Compact;
+import com.qg.smpt.printer.OrdersDispatcher;
+import com.qg.smpt.util.OrderBuilder;
 import com.qg.smpt.web.model.Json.OrderDetail;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -45,7 +48,45 @@ public class OrderController {
 	private OrderService orderService;
 	@Autowired
 	private UserService userService;
-	
+
+	/***
+	 * 批量下单入口,将订单存入缓存中
+	 * @param userId
+	 * @param order
+	 * @return
+	 */
+	@RequestMapping(value="bulkOrder/{userId}", method=RequestMethod.POST, produces="application/json;charset=utf-8")
+	@ResponseBody
+	public String bulkOrder(@PathVariable int userId, @RequestBody List<Order> order) {
+
+		try {
+			synchronized (ShareMem.userOrderBufferMap.get(userId)) {
+				List<Order> orders = ShareMem.userOrderBufferMap.get(userId);
+				if (orders == null) {
+					orders = new ArrayList<>();
+					ShareMem.userOrderBufferMap.put(userId, orders);
+				}
+				orders.addAll(order);
+
+				notify();
+			}
+//			int number = order.size();
+//			Compact compact = new Compact();
+//
+//			if (number > 10){
+//				compact.sendOrders(1,order);
+//			}else {
+//				compact.sendBulk(order,1);
+//			}
+		}catch (Exception e){
+			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"ERROR"});
+		}
+		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
+	}
+
+
+
+
 	@RequestMapping(value="/{userId}", method=RequestMethod.POST, produces="application/json;charset=utf-8")
 	@ResponseBody
 	public String bookOrder(@PathVariable int userId, @RequestBody String data) {

@@ -159,44 +159,6 @@ public class Compact {
         LOGGER.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审");
         int allOrdersNum = orders.size();
 
-        if(orders.size() < 5){
-            LOGGER.log(Level.DEBUG, "[中标]订单过少，只指派一台主控板进行打印");
-            int printerId = getPrinterIdByMaxCreForCompact(compactNumber);                      //获取信任度最大的打印机编号
-            Printer printer = ShareMem.printerIdMap.get(printerId);      //获取打印机对象
-            BulkOrder bOrders = ordersToBulk(orders,printer);            //订单组装成一个批次
-            printer.increaseBulkId();                                    //打印机打印批次加一
-            bOrders.setId(printer.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
-
-
-            synchronized (ShareMem.priBulkMap) {
-                ShareMem.priBulkMap.put(printer,bOrders);
-            }
-
-            //构建合同网中标报文
-            CompactModel compactModel = new CompactModel();
-            compactModel.setType(BConstants.winABid);
-            compactModel.setUrg((byte) urg);
-            compactModel.setCompactNumber((short) compactNumber);
-            compactModel.setCheckSum((short)0);
-            //记录在数据库中,// TODO: 2017/11/16
-            try {
-                compactMapper.addCompact(compactModel);
-            }finally {
-                sqlSession.commit();
-                sqlSession.close();
-            }
-            byte[] compactBytes = CompactModel.compactToBytes(compactModel);
-            ByteBuffer byteBuffer = ByteBuffer.wrap(compactBytes);
-
-            SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
-            try {
-                socketChannel.write(byteBuffer);
-                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{0}]",printer.getId(),orders.size());
-            } catch (IOException e) {
-                LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
-            }
-            return;
-        }else{
             List<Printer> printers = ShareMem.compactPrinter.get((short)compactNumber);
             double sumPrice = 0;
             for (Printer printer : printers){
@@ -249,7 +211,7 @@ public class Compact {
                     LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
                 }
 
-            }
+
             return;
         }
 

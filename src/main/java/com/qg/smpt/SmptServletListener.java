@@ -3,9 +3,12 @@ package com.qg.smpt; /**
  */
 
 import com.qg.smpt.printer.LifecycleException;
+import com.qg.smpt.printer.OrdersDispatcher;
 import com.qg.smpt.printer.PrinterConnector;
+import com.qg.smpt.share.ShareMem;
 import com.qg.smpt.util.Level;
 import com.qg.smpt.util.Logger;
+import com.qg.smpt.web.model.User;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -52,7 +55,12 @@ public final class SmptServletListener implements ServletContextListener,
     }
 
     public void sessionDestroyed(HttpSessionEvent se) {
-
+        int id = ((User)se.getSession().getAttribute("user")).getId();
+        OrdersDispatcher ordersDispatcher = ShareMem.userIdOrdersDispatcher.get(id);
+        if (ordersDispatcher != null) {
+            ordersDispatcher.flag = false;
+            ShareMem.userIdOrdersDispatcher.remove(id);
+        }
     }
 
     public void attributeAdded(HttpSessionBindingEvent sbe) {
