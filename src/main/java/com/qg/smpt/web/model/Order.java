@@ -749,7 +749,7 @@ public final class Order {
             // 填充二维码结束字符
             pos = BytesConvert.fillShort(BConstants.codeEnd, data, pos);
         }
-        DebugUtil.printBytes(data);
+//        DebugUtil.printBytes(data);
         return data;
     }
 

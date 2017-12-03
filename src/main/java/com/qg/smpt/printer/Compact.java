@@ -130,15 +130,14 @@ public class Compact {
             LOGGER.log(Level.ERROR, "[招标]合同网报文字节并未对齐");
         }
 
-        ByteBuffer byteBuffer = ByteBuffer.wrap(compactBytes);
 
         LOGGER.log(Level.DEBUG, "[招标]向主控板发送招标合同网报文");
         for (Map.Entry<Printer, SocketChannel> entry : ShareMem.priSocketMap.entrySet()){
             //当该主控板处于闲时状态时可向其发送合同网报文
             if (!entry.getKey().isBusy()) {
-                SocketChannel socketChannel = entry.getValue();
                 try {
-                    socketChannel.write(byteBuffer);
+                    ByteBuffer byteBuffer = ByteBuffer.wrap(compactBytes);
+                    entry.getValue().write(byteBuffer);
                     LOGGER.log(Level.DEBUG, "[招标]成功向主控板[{0}]发送合同网报文",entry.getKey().getId());
                 } catch (IOException e) {
                     LOGGER.log(Level.ERROR, "[招标]发送合同网报文发生错误");
@@ -159,62 +158,63 @@ public class Compact {
         LOGGER.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审");
         int allOrdersNum = orders.size();
 
-            List<Printer> printers = ShareMem.compactPrinter.get((short)compactNumber);
-            double sumPrice = 0;
-            for (Printer printer : printers){
-                sumPrice += ShareMem.priPriceMap.get(printer.getId());
+        List<Printer> printers = ShareMem.compactPrinter.get((short)compactNumber);
+        double sumPrice = 0;
+        for (Printer printer : printers){
+            sumPrice += ShareMem.priPriceMap.get(printer.getId());
+        }
+        //总代价为0说明当前主控板下无打印机连接 无法进行打印任务
+        if (sumPrice==0) return;
+        int pos = 0;
+        int seq = 1;
+
+        for (Printer printer : printers){
+            sqlSession = sqlSessionFactory.openSession();
+            compactMapper = sqlSession.getMapper(CompactMapper.class);
+            double orderNumOfDouble =  (ShareMem.priPriceMap.get(printer.getId()) / sumPrice * allOrdersNum);
+            int orderNumber = new BigDecimal(orderNumOfDouble).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+
+            List<Order> smallOrders = orders.subList(pos,pos+orderNumber);    //
+            pos += orderNumber;
+            BulkOrder bOrders = ordersToBulk(smallOrders,printer);       //组装一个批次
+            printer.increaseBulkId();                                    //打印机打印批次加一
+            bOrders.setId(printer.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
+
+
+            synchronized (ShareMem.priBulkMap) {
+                ShareMem.priBulkMap.put(printer,bOrders);
             }
-            //总代价为0说明当前主控板下无打印机连接 无法进行打印任务
-            if (sumPrice==0) return;
-            int pos = 0;
 
-            for (Printer printer : printers){
-                double orderNumOfDouble =  (ShareMem.priPriceMap.get(printer.getId()) / sumPrice * allOrdersNum);
-                int orderNumber = new BigDecimal(orderNumOfDouble).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+            //构建合同网中标报文
+            CompactModel compactModel = new CompactModel();
+            compactModel.setType(BConstants.winABid);
+            compactModel.setUrg((byte) urg);
+            compactModel.setCompactNumber((short) compactNumber);
+            compactModel.setCheckSum((short)0);
+            compactModel.setSeq((short) seq);
+            compactModel.setOrderNumber((short) smallOrders.size());
+            compactModel.setId(printer.getId());
+            //记录在数据库中 // TODO: 2017/11/16
+            try {
+                compactMapper.addCompact(compactModel);
+            }finally {
+                sqlSession.commit();
+                sqlSession.close();
+            }
 
-                List<Order> smallOrders = orders.subList(pos,pos+orderNumber);    //
-                pos += orderNumber;
-                BulkOrder bOrders = ordersToBulk(smallOrders,printer);       //组装一个批次
-                printer.increaseBulkId();                                    //打印机打印批次加一
-                bOrders.setId(printer.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
+            byte[] compactBytes = CompactModel.compactToBytes(compactModel);
 
-
-                synchronized (ShareMem.priBulkMap) {
-                    ShareMem.priBulkMap.put(printer,bOrders);
-                }
-
-
-
-
-                //构建合同网中标报文
-                CompactModel compactModel = new CompactModel();
-                compactModel.setType(BConstants.winABid);
-                compactModel.setUrg((byte) urg);
-                compactModel.setCompactNumber((short) compactNumber);
-                compactModel.setCheckSum((short)0);
-                //记录在数据库中 // TODO: 2017/11/16
-                try {
-                    compactMapper.addCompact(compactModel);
-                }finally {
-                    sqlSession.commit();
-                    sqlSession.close();
-                }
-
-                byte[] compactBytes = CompactModel.compactToBytes(compactModel);
-                ByteBuffer byteBuffer = ByteBuffer.wrap(compactBytes);
-
-                SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
-                try {
-                    socketChannel.write(byteBuffer);
-                    LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{0}]",printer.getId(),smallOrders.size());
-                } catch (IOException e) {
-                    LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
-                }
-
-
-            return;
+            SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
+            try {
+                socketChannel.write(ByteBuffer.wrap(compactBytes));
+                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{1}]",printer.getId(),smallOrders.size());
+            } catch (IOException e) {
+                LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
+            }
+            seq++;
         }
 
+        return;
 
     }
 
@@ -318,10 +318,9 @@ public class Compact {
                 ShareMem.priPriceMap.put(id,compactMapper.getPriById(id));
             }finally {
                 sqlSession.commit();
-                sqlSession.close();
             }
-
         }
+        sqlSession.close();
     }
 
     /***

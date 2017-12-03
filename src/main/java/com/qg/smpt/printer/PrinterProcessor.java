@@ -230,6 +230,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
 
         if (bytes[0] == (byte)0xCF && bytes[1] == (byte)0xFC) {
+            DebugUtil.printBytes(bytes);
             switch (bytes[2]) {
                 case BConstants.connectStatus :
                     LOGGER.log(Level.DEBUG, "打印机 发送连接数据，初始化打印机对象和打印机对象所拥有的缓存批次订单队列，异常订单队列，打印机处理线程 thread [{0}]", this.getId());
@@ -287,7 +288,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
     private void removeSign(byte[] bytes){
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
         synchronized (ShareMem.compactPrinter) {
-           ShareMem.compactPrinter.remove(compactModel.getCompactNumber());
+            ShareMem.compactPrinter.remove(compactModel.getCompactNumber());
         }
     }
 
@@ -325,7 +326,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         }
 
 
-        LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书，打印速度为[{1}],计算信任度[{2}]", compactModel.getId(),compactModel.getSpeed(),credibility);
+        LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书，打印速度为[{1}]，健康状态[{3}]，计算信任度[{2}]", compactModel.getId(),compactModel.getSpeed(),credibility,compactModel.getHealth());
 
 
         SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();

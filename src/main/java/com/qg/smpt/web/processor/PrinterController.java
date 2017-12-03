@@ -153,15 +153,15 @@ public class PrinterController {
 	 * @param
 	 * @return
 	 */
-	@RequestMapping(value="/printer/sendBulk/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@RequestMapping(value="/printer/sendBulk/{flag}/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
 	@ResponseBody
-	public String sendBulk(@PathVariable int number) {
+	public String sendBulk(@PathVariable int number,@PathVariable int flag) {
 		Compact compact = new Compact();
 		List<Order> orders = new ArrayList<Order>();
 		for (int i = 0; i<number; i++){
 			orders.add(OrderBuilder.produceOrder(false,false));
 		}
-		compact.sendBulkDitectly(1,orders);
+		compact.sendBulkDitectly(flag,orders);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 
