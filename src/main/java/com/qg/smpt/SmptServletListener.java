@@ -28,6 +28,7 @@ public final class SmptServletListener implements ServletContextListener,
 
     }
 
+    @Override
     public void contextInitialized(ServletContextEvent sce) {
 
         // 项目初始化, ServletSocket 线程池
@@ -45,15 +46,18 @@ public final class SmptServletListener implements ServletContextListener,
 
     }
 
+    @Override
     public void contextDestroyed(ServletContextEvent sce) {
 
     }
 
 
+    @Override
     public void sessionCreated(HttpSessionEvent se) {
 
     }
 
+    @Override
     public void sessionDestroyed(HttpSessionEvent se) {
         int id = ((User)se.getSession().getAttribute("user")).getId();
         OrdersDispatcher ordersDispatcher = ShareMem.userIdOrdersDispatcher.get(id);
@@ -63,14 +67,17 @@ public final class SmptServletListener implements ServletContextListener,
         }
     }
 
+    @Override
     public void attributeAdded(HttpSessionBindingEvent sbe) {
 
     }
 
+    @Override
     public void attributeRemoved(HttpSessionBindingEvent sbe) {
 
     }
 
+    @Override
     public void attributeReplaced(HttpSessionBindingEvent sbe) {
 
     }
