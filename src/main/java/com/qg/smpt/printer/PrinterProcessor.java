@@ -298,27 +298,24 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      * @param socketChannel
      */
     private void parseBid(byte[] bytes, SocketChannel socketChannel){
-        double price;
 
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
-        //存储打印速度（一台主控板下的打印机数量）
-        synchronized (ShareMem.priSpeedMap) {
-            ShareMem.priSpeedMap.put(compactModel.getId(),compactModel.getSpeed());
-        }
-
         //获得打印机对象
         Printer printer = ShareMem.printerIdMap.get(compactModel.getId());
+
+        //存储打印速度（一台主控板下的打印机数量）
+        printer.setSpeed(compactModel.getSpeed());
+
         //计算信任度
         Double credibility =(BConstants.initialCre + BConstants.alpha*printer.getPrintSuccessNum()-BConstants.beta*printer.getPrintErrorNum())*compactModel.getHealth();
+
         //存储信任度
-        synchronized (ShareMem.priCreMap) {
-            ShareMem.priCreMap.put(compactModel.getId(),credibility);
-        }
+        printer.setCre(credibility);
+
         //计算存储代价 并存储打印代价
-        synchronized (ShareMem.priPriceMap) {
-            price = credibility * compactModel.getSpeed();
-            ShareMem.priPriceMap.put(compactModel.getId(),price);
-        }
+        double price = credibility * compactModel.getSpeed();
+        printer.setPrice(price);
+
         //将进行投标的主控板进行存储
         synchronized (ShareMem.compactPrinter) {
             List<Printer> printers = ShareMem.compactPrinter.get(compactModel.getCompactNumber());

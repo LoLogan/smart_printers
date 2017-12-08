@@ -3,7 +3,11 @@ package com.qg.smpt.printer;
 import com.qg.smpt.share.ShareMem;
 import com.qg.smpt.util.Level;
 import com.qg.smpt.util.Logger;
+import com.qg.smpt.util.SqlSessionFactoryBuild;
+import com.qg.smpt.web.model.Printer;
 import com.qg.smpt.web.repository.PrinterMapper;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
@@ -174,10 +178,29 @@ public class PrinterConnector implements Runnable, Lifecycle{
             }catch (IOException e) {
                 LOGGER.log(Level.ERROR, "暂时可忽略的错误 serverSocketChannel ", e);
                 if (sc != null && sc.isOpen()) {
+                    //异常处理，更新缓存
                     try {
-                        Collection<SocketChannel> col = ShareMem.priSocketMap.values();
-                        col.remove(sc);
+                        Printer p = null;
+                        for (Map.Entry<Printer, SocketChannel> entry : ShareMem.priSocketMap.entrySet()){
+                            if(entry.getValue() == sc){
+                                p = entry.getKey();
+                                break;
+                            }
+                        }
+                        if (p!=null){
+                            SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
+                            SqlSession sqlSession = sqlSessionFactory.openSession();
+                            PrinterMapper printerMapper = sqlSession.getMapper(PrinterMapper.class);
+                            int userId = printerMapper.selectUserIdByPrinter(p.getId());
+                            List<Printer> printers= ShareMem.userIdMap.get(userId).getPrinters();
+                            printers.remove(p);
+                            ShareMem.priSocketMap.remove(p);
+                            ShareMem.printerIdMap.remove(p.getId());
+                        }
+
                         sc.close();
+
+
                     } catch (IOException ee) {
                         LOGGER.log(Level.ERROR, "socket close exception", ee);
                     }

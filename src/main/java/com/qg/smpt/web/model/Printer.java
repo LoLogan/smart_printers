@@ -28,6 +28,34 @@ public final class Printer {
     private int printErrorNum;      // 打印失败数量
     private int successRate;        // 成功率
 
+    private Double cre;             //  信任度
+    private Short speed;            //  打印速度/打印能力
+    private Double price;           //  打印代价
+
+    public Double getCre() {
+        return cre;
+    }
+
+    public void setCre(Double cre) {
+        this.cre = cre;
+    }
+
+    public Short getSpeed() {
+        return speed;
+    }
+
+    public void setSpeed(Short speed) {
+        this.speed = speed;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
     public int getOredrsNum() {
         return oredrsNum;
     }

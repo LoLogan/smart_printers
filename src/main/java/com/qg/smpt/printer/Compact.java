@@ -11,6 +11,7 @@ import com.qg.smpt.web.model.BulkOrder;
 import com.qg.smpt.web.model.Order;
 import com.qg.smpt.web.model.Printer;
 
+import com.qg.smpt.web.model.User;
 import com.qg.smpt.web.repository.CompactMapper;
 import com.qg.smpt.web.repository.UserMapper;
 import org.apache.ibatis.reflection.SystemMetaObject;
@@ -56,7 +57,7 @@ public class Compact {
      * 4. 主控板进行签约确认并进行订单的下发（在PrinterProcessor的sign方法中体现）
      * @param urg
      */
-    public void sendOrdersByCompact(int urg, List<Order> orders){
+    public void sendOrdersByCompact(int userId, int urg, List<Order> orders){
 
         SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
         SqlSession sqlSession = sqlSessionFactory.openSession();
@@ -68,7 +69,7 @@ public class Compact {
             ShareMem.compactPrinter.put((short) compactNumber, printers);
         }
 
-        callForBid(urg, (short) compactNumber);
+        callForBid(userId,urg, (short) compactNumber);
 
         //投标的策略为：只限定主控板在某一时间内发送标书，逾期不候
         try {
@@ -110,7 +111,7 @@ public class Compact {
      * 进行招标，向所有已连接的主控板发送合同网报文
      * @param urg 加急标志 0-不加急 1-加急
      */
-    public void callForBid(int urg,short compactNumber){
+    public void callForBid(int userId, int urg,short compactNumber){
 
         //合同网数据报文的装配
         CompactModel compactModel = new CompactModel();
@@ -134,7 +135,7 @@ public class Compact {
         LOGGER.log(Level.DEBUG, "[招标]向主控板发送招标合同网报文");
         for (Map.Entry<Printer, SocketChannel> entry : ShareMem.priSocketMap.entrySet()){
             //当该主控板处于闲时状态时可向其发送合同网报文
-            if (!entry.getKey().isBusy()) {
+            if (!entry.getKey().isBusy() && entry.getKey().getUserId()==userId) {
                 try {
                     ByteBuffer byteBuffer = ByteBuffer.wrap(compactBytes);
                     entry.getValue().write(byteBuffer);
@@ -161,7 +162,7 @@ public class Compact {
         List<Printer> printers = ShareMem.compactPrinter.get((short)compactNumber);
         double sumPrice = 0;
         for (Printer printer : printers){
-            sumPrice += ShareMem.priPriceMap.get(printer.getId());
+            sumPrice += printer.getPrice();
         }
         //总代价为0说明当前主控板下无打印机连接 无法进行打印任务
         if (sumPrice==0) return;
@@ -171,10 +172,10 @@ public class Compact {
         for (Printer printer : printers){
             sqlSession = sqlSessionFactory.openSession();
             compactMapper = sqlSession.getMapper(CompactMapper.class);
-            double orderNumOfDouble =  (ShareMem.priPriceMap.get(printer.getId()) / sumPrice * allOrdersNum);
+            double orderNumOfDouble =  (printer.getPrice() / sumPrice * allOrdersNum);
             int orderNumber = new BigDecimal(orderNumOfDouble).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
 
-            List<Order> smallOrders = orders.subList(pos,pos+orderNumber);    //
+            List<Order> smallOrders = orders.subList(pos,pos+orderNumber);    //截取一个小批次
             pos += orderNumber;
             BulkOrder bOrders = ordersToBulk(smallOrders,printer);       //组装一个批次
             printer.increaseBulkId();                                    //打印机打印批次加一
@@ -226,17 +227,16 @@ public class Compact {
 
         List<Printer> printers = ShareMem.compactPrinter.get((short)compactNumber);
 
-        int id = printers.get(0).getId();
-        double cre = ShareMem.priCreMap.get(id);
-
+        Printer p = printers.get(0);
+        double cre = p.getCre();
 
         for (Printer printer : printers){
-            if (ShareMem.priCreMap.get(printer.getId()) >= cre) {
-                id = printer.getId();
-                cre = ShareMem.priCreMap.get(printer.getId());
+            if (printer.getCre() >= cre) {
+                p = printer;
+                cre = printer.getCre();
             }
         }
-        return id;
+        return p.getId();
     }
 
     /***
@@ -314,8 +314,8 @@ public class Compact {
         for (Map.Entry<Integer, Printer> entry : ShareMem.printerIdMap.entrySet()){
             try {
                 int id = entry.getKey();
-                ShareMem.priCreMap.put(id,compactMapper.getCreById(id));
-                ShareMem.priPriceMap.put(id,compactMapper.getPriById(id));
+                entry.getValue().setCre(compactMapper.getCreById(id));
+                entry.getValue().setPrice(compactMapper.getPriById(id));
             }finally {
                 sqlSession.commit();
             }
@@ -329,22 +329,20 @@ public class Compact {
      */
     private int getPrinterIdByMaxCreForBulk(int userId){
 
-        int id;
         double cre;
-
-        List<Printer> printers = ShareMem.userListMap.get(userId);
+        User user = ShareMem.userIdMap.get(userId);
+        List<Printer> printers = user.getPrinters();
         Printer printer = printers.get(0);
-        id = printer.getId();
-        cre = ShareMem.priCreMap.get(id);
+        cre = printer.getCre();
 
         for (Printer p : printers){
-            if (ShareMem.priCreMap.get(p.getId()) >= cre){
-                id = p.getId();
-                cre = ShareMem.priCreMap.get(p.getId());
+            if (p.getCre() >= cre){
+                printer = p;
+                cre = p.getCre();
             }
 
         }
 
-        return id;
+        return printer.getId();
     }
 }

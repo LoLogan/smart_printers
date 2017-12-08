@@ -1,10 +1,12 @@
 package com.qg.smpt.printer.model;
 
 import com.qg.smpt.util.BytesConvert;
+import com.qg.smpt.web.model.Printer;
 import org.apache.ibatis.reflection.SystemMetaObject;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * 合同网报文协议
@@ -40,6 +42,8 @@ public class CompactModel {
     private short checkSum;                         //校验和
 
     private short end = BConstants.compactEnd;      //结束符
+
+
 
     public static void main(String[] args){
 
@@ -141,6 +145,7 @@ public class CompactModel {
                 ", end=" + end +
                 '}';
     }
+
 
     public short getPadding0() {
         return padding0;

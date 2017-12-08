@@ -65,11 +65,6 @@ public final class ShareMem {
     /***
      * 合同网下新增共享变量
      */
-    public static Map<Integer, Double> priCreMap = null;                    // 主控板-信任度
-
-    public static Map<Integer, Short> priSpeedMap = null;                 // 主控板-打印速度
-
-    public static Map<Integer, Double> priPriceMap = null;                 // 主控板-打印代价
 
     public static Map<Printer, BulkOrder> priBulkMap = null;                // 主控板-打印批次
 
@@ -99,11 +94,11 @@ public final class ShareMem {
 
         priSocketMap = new HashMap<Printer, SocketChannel>();
 
-        priCreMap = new HashMap<Integer, Double>();
-
-        priSpeedMap = new HashMap<Integer, Short>();
-
-        priPriceMap = new HashMap<Integer, Double>();
+//        priCreMap = new HashMap<Integer, Double>();
+//
+//        priSpeedMap = new HashMap<Integer, Short>();
+//
+//        priPriceMap = new HashMap<Integer, Double>();
 
         priBulkMap = new HashMap<Printer, BulkOrder>();
 

@@ -136,15 +136,15 @@ public class PrinterController {
 	 * @param
 	 * @return
 	 */
-	@RequestMapping(value="/printer/sendCompact/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@RequestMapping(value="/printer/sendCompact/{userId}/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
 	@ResponseBody
-	public String sendCompact(@PathVariable int number) {
+	public String sendCompact(@PathVariable int number,@PathVariable int userId) {
 		Compact compact = new Compact();
 		List<Order> orders = new ArrayList<Order>();
 		for (int i = 0; i<number; i++){
 			orders.add(OrderBuilder.produceOrder(false,false));
 		}
-		compact.sendOrdersByCompact(1,orders);
+		compact.sendOrdersByCompact(userId,1,orders);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 

@@ -52,25 +52,25 @@ public class OrdersDispatcher implements Runnable{
                     //达到上限值，立即启用合同网
                     LOGGER.log(Level.DEBUG, "达到订单上限值，启用合同网");
                     List<Order> bulkOrders = orders.subList(number-MAX_NUM, number);
-                    compact.sendOrdersByCompact(0,bulkOrders);
+                    compact.sendOrdersByCompact(userId,0,bulkOrders);
                     orders.removeAll(bulkOrders);
                 } else if (number <= MAX_NUM && number > MAX_NUM/2) {
                     //处于紧张状态，直接委派打印机下单，如果长期处于这种状态则通过合同网进行下单
                     if (standard >= MAX_TIME) {
                         //合同网下单
                         LOGGER.log(Level.DEBUG, "紧张状态，启用合同网，当前standard的值为[{0}]", standard);
-                        compact.sendOrdersByCompact(0,orders);
+                        compact.sendOrdersByCompact(userId,0,orders);
                     } else {
                         //直接委派打印机下单
                         LOGGER.log(Level.DEBUG, "紧张状态，直接委派打印机下单，当前standard的值为[{0}]", standard);
-                        compact.sendBulkDitectly(0,orders);
+                        compact.sendBulkDitectly(userId,0,orders);
                     }
                     standard++;
                     orders.clear();
                 } else if(number <= MAX_NUM/2 && number > 0) {
                     //轻松状态，直接委派打印机下单
                     LOGGER.log(Level.DEBUG, "轻松状态，直接委派打印机下单，当前standard的值为[{0}]", standard);
-                    compact.sendBulkDitectly(0,orders);
+                    compact.sendBulkDitectly(userId,0,orders);
                     standard--;
                     orders.clear();
                 } else if (number == 0){
