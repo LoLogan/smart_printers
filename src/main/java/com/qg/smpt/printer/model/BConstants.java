@@ -53,17 +53,19 @@ public final class BConstants {
 
     public static final byte orderExcep = (byte)0x05;    // 打印成功-之前的异常订单
 
-    public static final byte orderExcepFail = (byte)0x06;
+    public static final byte orderExcepFail = (byte)0x06;   // 异常订单出错
 
-    public static final byte orderExcepInQueue = (byte)0x07;
+    public static final byte orderExcepInQueue = (byte)0x07;    // 异常订单进入打印队列
 
-    public static final byte orderExcepTyping = (byte)0x08;
+    public static final byte orderExcepTyping = (byte)0x08;     // 异常订单正在打印
 
-    public static final byte orderExcepDataW = (byte)0x09;
+    public static final byte orderExcepDataW = (byte)0x09;      // 异常订单数据解析错误
 
     public static final byte orderWait = (byte)0x0A;     // 等待被发送
 
     public static final byte orderSent = (byte)0x0B;     // 订单已发送
+
+    public static final byte orderMigrate = (byte)0x0C;     // 订单转移
 
     /* 批次订单状态 */
     public static final byte bulkSucc  = (byte)0x00;    // 批次订单成功

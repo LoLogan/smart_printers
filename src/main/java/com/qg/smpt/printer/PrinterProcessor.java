@@ -12,6 +12,7 @@ import com.qg.smpt.web.repository.CompactMapper;
 import com.qg.smpt.web.repository.OrderMapper;
 import com.qg.smpt.web.repository.PrinterMapper;
 import com.qg.smpt.web.repository.UserMapper;
+import com.sun.glass.ui.Size;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.apache.ibatis.session.SqlSession;
@@ -683,14 +684,15 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             bulkOrderF = bulkOrderList.get(position);
             LOGGER.log(Level.DEBUG,"寻找的批次订单号[{0}], 打印机发送的批次订单号 [{1}]", bulkOrderF.getId(), bOrderStatus.printerId);
             if (bulkOrderF.getId() == bOrderStatus.bulkId) {
+                // 找到批次
                 LOGGER.log(Level.DEBUG, "已找到打印机 [{0}]  对应批次订单号 [{1}] 当前线程 [{2}]", bOrderStatus.printerId, bOrderStatus.bulkId, this.id);
-
+                // 记录该批次数量大小
                 int size = bulkOrderF.getbOrders().size();
                 if (size < bOrderStatus.inNumber) {
                     LOGGER.log(Level.ERROR, "批次 [{2}] 批次内序号 [{0}] 超出批次订单范围 [{1}] 当前线程 [{3}]", bOrderStatus.inNumber, size, bOrderStatus.bulkId, this.id);
                     return;
                 }
-
+                // 获得对应的那份订单
                 order = bulkOrderF.getOrders().get(bOrderStatus.inNumber - 1);
                 bOrder = bulkOrderF.getbOrders().get(bOrderStatus.inNumber - 1);
 
@@ -728,6 +730,10 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                         order.setExecStartPrintTime(time);
                         break;
 
+                    case BConstants.orderMigrate:
+                        // 批次转移，针对整个批次，无需处理
+                        break;
+
                     case BConstants.orderExcep:
                     case BConstants.orderExcepDataW:
                     case BConstants.orderExcepFail:
@@ -746,14 +752,114 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             return ;
         }
 
-
-
         LOGGER.log(Level.DEBUG, "内存中的订单id: [{0}], 当前线程 [{1}]", order.getId(), this.id);
         LOGGER.log(Level.DEBUG, "====确认 orderId: {0}, userId: {1}", order.getId(), order.getUserId());
 
 
         /* 失败 重发数据*/
-        if ( flag == BConstants.orderFail || flag == BConstants.orderDataW) {
+        if (flag == BConstants.orderMigrate) {
+            // todo : 该部分未与硬件端进行测试，此句测试后删除！
+            // todo:考虑打印机报文问题！！！
+
+            // 订单打印失败，从此订单开始批次开始转移
+            // 获得批次
+            bulkOrderF = bulkOrderList.get(position);
+            int size = bulkOrderF.getOrders().size();
+            // 拿到需要重新打印的订单
+            List<Order> orderList = new ArrayList<>();
+            List<BOrder> bOrderList = new ArrayList<>();
+            // 批次订单数据的总大小
+            int totalSize = 0;
+
+            /* 组装批次订单 */
+            BulkOrder bulkOrder = new BulkOrder(new ArrayList<BOrder>());
+
+            // 加急处理设置
+            bulkOrder.setBulkType((short) 1);
+            bulkOrder.setDataSize(totalSize);
+            printer.increaseBulkId();
+            bulkOrder.setId(printer.getCurrentBulk());
+            bulkOrder.setUserId(bulkOrderF.getUserId());
+
+            // 获取需要重新打印的订单
+            long time = System.currentTimeMillis();
+            for (int i=bOrderStatus.inNumber - 1, num=1; i<size; i++, num++) {
+                Order migrateOrder = bulkOrderF.getOrders().get(i);
+                BOrder bMigrateOrder = bulkOrderF.getbOrders().get(i);
+
+                totalSize += bMigrateOrder.size;
+                migrateOrder.setExecEnterQueueTime(time);
+                migrateOrder.setExecSendTime(time);
+                migrateOrder.setOrderStatus(Integer.valueOf(flag).toString());
+                // todo 判断该次要求重发的订单是否是故意封装错误的订单，如果是重新封装成正确的订单
+                if(migrateOrder.getIndexError() >= 0 && migrateOrder.getIndexError() < 3) {
+                    migrateOrder.setIndexError(4);
+                }
+
+                orderList.add(migrateOrder);
+                bOrderList.add(migrateOrder.orderToBOrder( (short) (bulkOrder.getId()), (short) num ) );
+            }
+            LOGGER.log(Level.INFO, "打印机 [{0}] 打印订单 (订单批次号 [{1}], 批次内序号 [{2}]) 开始进行批次转移, 当前线程 [{3}], 当前时间为 [{4}]," +
+                    " 离发送订单相差的时间为 [{5}]",
+                    bOrderStatus.printerId, bOrderStatus.bulkId, bOrderStatus.inNumber, this.id,
+                    TimeUtil.timeToString(time), time - bulkOrderF.getSendtime());
+
+            // 将订单封装到批次中
+            bulkOrder.getbOrders().addAll(bOrderList);
+            bulkOrder.getOrders().addAll(orderList);
+
+            /* 转化发送批次订单数据 */
+            byte[] bBulkOrderByters = BBulkOrder.bBulkOrderToBytes(BulkOrder.convertBBulkOrder(bulkOrder, true));
+            bBulkOrderByters[15] = (byte)0x1;
+            LOGGER.log(Level.DEBUG, "打印机 [{0}] 重新发送批次转移订单 当前线程 [{1}]", bOrderStatus.printerId, this.id);
+            DebugUtil.printBytes(bBulkOrderByters);
+
+            try {
+
+                // 根据打印机id获得用户id
+                int userid = -1;
+                // 受原来设计限制，导致采用Map相反的设计！！！
+                // 从缓存中提取用户id
+                for(int i : ShareMem.userListMap.keySet()) {
+                    List<Printer> printerList = ShareMem.userListMap.get(i);
+                    for (Printer agent : printerList) {
+                        if (agent.getId() == position) {
+                            userid = i;
+                            break;
+                        }
+                    }
+                    if (userid != -1) {
+                        break;
+                    }
+                }
+
+                // 将批次订单转移到信任度最高的anget
+                Compact compact = new Compact();
+                // 获得最高信任度打印机 id
+                int printerId = compact.getMaxCreForBulkPrinter(userid);
+                Printer agent = ShareMem.printerIdMap.get(id);
+                SocketChannel printerChannel = ShareMem.priSocketMap.get(agent);
+                if (printerChannel != null && printerChannel != socketChannel) {
+                    // 直接发送到信任度最高的打印机
+                    printerChannel.write(ByteBuffer.wrap(bBulkOrderByters));
+                } else {
+                    // 如果找不到打印机或者只有一台打印机的情况，直接按照原路返回
+                    socketChannel.write(ByteBuffer.wrap(bBulkOrderByters));
+                }
+
+            } catch (IOException e) {
+                LOGGER.log(Level.ERROR, "打印机 [{0}] 重新发送异常单 异常 当前线程 [{1}]", bOrderStatus.printerId,
+                        this.id, e);
+            }
+
+
+            long resendTime = System.currentTimeMillis();
+            LOGGER.log(Level.INFO, "打印机 [{0}] 转移发送批次 [{1}] 中的异常订单 [{2}] ，当前时间为 [{3}] 距离接受到异常报告时" +
+                            "所过去的时间为 [{4}] ms", bOrderStatus.printerId, bulkOrderF.getId(),bOrderStatus.inNumber,
+                    TimeUtil.timeToString(resendTime), resendTime - time);
+
+        } else if ( flag == BConstants.orderFail || flag == BConstants.orderDataW) {
+            // 订单打印失败或者订单解析错误，将该订单再次打印
             bulkOrderF.increaseReceNum();
 
             // TODO 如何获取打印机发来的异常订单被更新后的数据
