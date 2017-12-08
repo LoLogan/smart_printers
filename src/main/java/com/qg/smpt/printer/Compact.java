@@ -347,4 +347,16 @@ public class Compact {
 
         return id;
     }
+
+    /**
+     * 通过用户id获得当前用户下信任度最大的打印机id
+     * @param userId 用户id
+     * @return 信任度最大的打印机id
+     */
+    public int getMaxCreForBulkPrinter(int userId) {
+        if(userId < 0) {
+            return -1;
+        }
+        return getPrinterIdByMaxCreForBulk(userId);
+    }
 }

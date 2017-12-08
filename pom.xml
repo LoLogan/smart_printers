@@ -141,25 +141,25 @@
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.json/json -->
-        <!--<dependency>-->
-            <!--<groupId>org.json</groupId>-->
-            <!--<artifactId>json</artifactId>-->
-            <!--<version>20160212</version>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20160212</version>
+        </dependency>
 
-		<!--&lt;!&ndash; https://mvnrepository.com/artifact/org.codehaus.jackson/jackson-core-asl &ndash;&gt;-->
-		<!--<dependency>-->
-		    <!--<groupId>org.codehaus.jackson</groupId>-->
-		    <!--<artifactId>jackson-core-asl</artifactId>-->
-		    <!--<version>1.9.13</version>-->
-		<!--</dependency>-->
-		<!---->
-		<!--&lt;!&ndash; https://mvnrepository.com/artifact/org.codehaus.jackson/jackson-mapper-asl &ndash;&gt;-->
-		<!--<dependency>-->
-		    <!--<groupId>org.codehaus.jackson</groupId>-->
-		    <!--<artifactId>jackson-mapper-asl</artifactId>-->
-		    <!--<version>1.9.13</version>-->
-		<!--</dependency>-->
+		<!-- https://mvnrepository.com/artifact/org.codehaus.jackson/jackson-core-asl -->
+		<dependency>
+		    <groupId>org.codehaus.jackson</groupId>
+		    <artifactId>jackson-core-asl</artifactId>
+		    <version>1.9.13</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.codehaus.jackson/jackson-mapper-asl -->
+		<dependency>
+		    <groupId>org.codehaus.jackson</groupId>
+		    <artifactId>jackson-mapper-asl</artifactId>
+		    <version>1.9.13</version>
+		</dependency>
 
         <dependency>
             <groupId>commons-io</groupId>

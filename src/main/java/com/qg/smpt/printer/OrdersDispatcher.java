@@ -63,14 +63,14 @@ public class OrdersDispatcher implements Runnable{
                     } else {
                         //直接委派打印机下单
                         LOGGER.log(Level.DEBUG, "紧张状态，直接委派打印机下单，当前standard的值为[{0}]", standard);
-                        compact.sendBulkDitectly(0,orders);
+                        compact.sendBulkDitectly(userId,0,orders);
                     }
                     standard++;
                     orders.clear();
                 } else if(number <= MAX_NUM/2 && number > 0) {
                     //轻松状态，直接委派打印机下单
                     LOGGER.log(Level.DEBUG, "轻松状态，直接委派打印机下单，当前standard的值为[{0}]", standard);
-                    compact.sendBulkDitectly(0,orders);
+                    compact.sendBulkDitectly(userId,0,orders);
                     standard--;
                     orders.clear();
                 } else if (number == 0){
