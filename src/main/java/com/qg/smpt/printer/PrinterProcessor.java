@@ -814,29 +814,24 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             LOGGER.log(Level.DEBUG, "打印机 [{0}] 重新发送批次转移订单 当前线程 [{1}]", bOrderStatus.printerId, this.id);
             DebugUtil.printBytes(bBulkOrderByters);
 
+            SqlSession sqlSession = sqlSessionFactory.openSession();
             try {
-
                 // 根据打印机id获得用户id
-                int userid = -1;
-                // 受原来设计限制，导致采用Map相反的设计！！！
-                // 从缓存中提取用户id
-                for(int i : ShareMem.userListMap.keySet()) {
-                    List<Printer> printerList = ShareMem.userListMap.get(i);
-                    for (Printer agent : printerList) {
-                        if (agent.getId() == position) {
-                            userid = i;
-                            break;
-                        }
-                    }
-                    if (userid != -1) {
-                        break;
-                    }
+                Integer userId = -1;
+                PrinterMapper printerMapper = sqlSession.getMapper(PrinterMapper.class);
+                userId = printerMapper.selectUserIdByPrinter(bOrderStatus.printerId);
+                if (userId == null) {
+                    LOGGER.log(Level.INFO, "打印机 [{0}] 发送错误主控板Id[{1}] 当前线程 [{2}]", bOrderStatus.printerId, position,this.id);
+                    userId = -1;
                 }
+                // todo:这里用户id可能发生数据不同步的情况
+                // 另外一种方法：从缓存中提取用户id，通过用户缓存集合 userIdMap 遍历所有用户的 User 中的打印机列表
+                // 从而确定打印机用户id
 
                 // 将批次订单转移到信任度最高的anget
                 Compact compact = new Compact();
                 // 获得最高信任度打印机 id
-                int printerId = compact.getMaxCreForBulkPrinter(userid);
+                int printerId = compact.getMaxCreForBulkPrinter(userId);
                 Printer agent = ShareMem.printerIdMap.get(id);
                 SocketChannel printerChannel = ShareMem.priSocketMap.get(agent);
                 if (printerChannel != null && printerChannel != socketChannel) {
@@ -850,6 +845,9 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             } catch (IOException e) {
                 LOGGER.log(Level.ERROR, "打印机 [{0}] 重新发送异常单 异常 当前线程 [{1}]", bOrderStatus.printerId,
                         this.id, e);
+            } finally {
+                sqlSession.commit();
+                sqlSession.close();
             }
 
 
