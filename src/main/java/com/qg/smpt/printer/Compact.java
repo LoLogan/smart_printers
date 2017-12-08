@@ -271,10 +271,10 @@ public class Compact {
      * @param orders
      * @param urg
      */
-    public void sendBulkDitectly(int urg,List<Order> orders){
+    public void sendBulkDitectly(int userId,int urg,List<Order> orders){
         updatePrinterMsg();
         LOGGER.log(Level.DEBUG, "[批次]直接发送批次订单数据");
-        int printerId = getPrinterIdByMaxCreForBulk();                //获取信任度最大的打印机编号
+        int printerId = getPrinterIdByMaxCreForBulk(userId);                //获取信任度最大的打印机编号
         Printer printer = ShareMem.printerIdMap.get(printerId);      //获取打印机对象
         BulkOrder bOrders = ordersToBulk(orders,printer);            //订单组装成一个批次
         printer.increaseBulkId();                                    //打印机打印批次加一
@@ -327,23 +327,24 @@ public class Compact {
      * 求出批次发送中最大信任度的打印机的编号
      * @return
      */
-    private int getPrinterIdByMaxCreForBulk(){
+    private int getPrinterIdByMaxCreForBulk(int userId){
 
-        int id = 0;
-        double cre = 0;
+        int id;
+        double cre;
 
-        for (Map.Entry<Integer, Double> entry : ShareMem.priCreMap.entrySet()){
-            id = entry.getKey();
-            cre = entry.getValue();
-            break;
-        }
+        List<Printer> printers = ShareMem.userListMap.get(userId);
+        Printer printer = printers.get(0);
+        id = printer.getId();
+        cre = ShareMem.priCreMap.get(id);
 
-        for (Map.Entry<Integer, Double> entry : ShareMem.priCreMap.entrySet()){
-            if (entry.getValue() >= cre) {
-                id = entry.getKey();
-                cre = entry.getValue();
+        for (Printer p : printers){
+            if (ShareMem.priCreMap.get(p.getId()) >= cre){
+                id = p.getId();
+                cre = ShareMem.priCreMap.get(p.getId());
             }
+
         }
+
         return id;
     }
 }
