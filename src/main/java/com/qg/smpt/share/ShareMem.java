@@ -94,12 +94,6 @@ public final class ShareMem {
 
         priSocketMap = new HashMap<Printer, SocketChannel>();
 
-//        priCreMap = new HashMap<Integer, Double>();
-//
-//        priSpeedMap = new HashMap<Integer, Short>();
-//
-//        priPriceMap = new HashMap<Integer, Double>();
-
         priBulkMap = new HashMap<Printer, BulkOrder>();
 
         compactPrinter = new HashMap<Short, List<Printer>>();

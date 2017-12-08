@@ -411,16 +411,14 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             /* Step 3 根据userId 获取 user 对象 */
             user = ShareMem.userIdMap.get(userId);
             synchronized (ShareMem.userIdMap) {
-                if (user == null) {
                     UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
                     user = userMapper.selectUserPrinter(userId);
                     if (user == null) {
                         LOGGER.log(Level.WARN, "无商家信息 [{0}]", userId);
                         return;
                     }
-
                     ShareMem.userIdMap.put(userId, user);
-                }
+
             }
 
 
@@ -449,7 +447,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             return ;
         }
 
-
+        printer.setUserId(userId);
         printer.setConnected(true);
         printer.setCurrentBulk(0);
         // TODO 如果有两个线程同时向 HashMap中添加相同printerId， 是否会出现重复问题

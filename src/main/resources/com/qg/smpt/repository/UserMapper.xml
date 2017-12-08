@@ -33,6 +33,9 @@
 		<collection property="printers" ofType="com.qg.smpt.web.model.Printer">
 			<id property="id" column="printer_id" />
 			<result property="printerStatus" column="printer_status" />
+			<result property="cre" column="credibility" />
+			<result property="speed" column="speed" />
+			<result property="price" column="price" />
 		</collection>
 	</resultMap>
 
@@ -56,10 +59,9 @@
 
 	<select id="selectUserPrinter" resultMap="UserPrinterMap"
 		parameterType="java.lang.Integer">
-		select u.id, u.user_name, u.user_account, u.user_password, u.user_printers,
-		u.user_logo,
+		select u.id, u.user_name, u.user_account, u.user_password, u.user_printers,u.user_logo,
 		u.user_qrcode, u.user_store, u.user_address, u.user_phone, p.id as printer_id,
-		p.printer_status
+		p.printer_status,p.credibility,p.speed,p.price
 		from printer as p, user_printer as up, user as u where up.user_id = #{id} AND u.id = up.user_id
 		and up.printer_id = p.id;
 	</select>
