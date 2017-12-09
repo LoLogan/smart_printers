@@ -31,6 +31,15 @@ public final class Printer {
     private Double cre;             //  信任度
     private Short speed;            //  打印速度/打印能力
     private Double price;           //  打印代价
+    private Short bufferSize;     //主控板缓冲区大小
+
+    public Short getBufferSize() {
+        return bufferSize;
+    }
+
+    public void setBufferSize(Short bufferSize) {
+        this.bufferSize = bufferSize;
+    }
 
     public Double getCre() {
         return cre;

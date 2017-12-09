@@ -29,6 +29,16 @@ public class User {
 
     private List<Printer> printers;
 
+    private boolean compact;
+
+    public boolean isCompact() {
+        return compact;
+    }
+
+    public void setCompact(boolean compact) {
+        this.compact = compact;
+    }
+
     private byte[] logoB;
 
     public boolean isConvert() {

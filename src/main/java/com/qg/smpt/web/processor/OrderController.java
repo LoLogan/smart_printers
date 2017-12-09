@@ -63,7 +63,7 @@ public class OrderController {
 			synchronized (ShareMem.userOrderBufferMap.get(userId)) {
 				List<Order> orders = ShareMem.userOrderBufferMap.get(userId);
 				if (orders == null) {
-					orders = new ArrayList<>();
+					orders = new ArrayList<Order>();
 					ShareMem.userOrderBufferMap.put(userId, orders);
 				}
 				orders.addAll(order);

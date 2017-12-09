@@ -17,7 +17,7 @@ public class CompactModel {
 
     private byte type;                               //报文类型
 
-    private byte urg;                                //紧急标识符
+    private byte urg;                                //紧急标识符,好像暂时遗弃了
 
     private int seconds;                             //毫秒数,时间戳
 
@@ -25,19 +25,13 @@ public class CompactModel {
 
     private short padding0;                           //保留
 
-    private short seq;                              //合同子序号             暂时不用
-
-    private short orderNumber;                      //订单个数              暂时不用
-
-    private short bulklength;                       //批次长度              暂时不用
-
     private int id;                              //主控板id
 
     private short speed;                            //打印速度（即一台主控板下有几台打印机）
 
-    private short health;                           //健康状态
+    private short bufferSize;                       //缓冲区的大小
 
-    private int padding;                          //保留（填充）
+    private float health;                           //健康状态
 
     private short checkSum;                         //校验和
 
@@ -71,9 +65,11 @@ public class CompactModel {
 
         compactModel.setSpeed(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 16, 18)));
 
-        compactModel.setHealth(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 18, 20)));
 
-        compactModel.setPadding(BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 20, 24)));
+
+        compactModel.setBufferSize(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 18, 20)));
+
+        compactModel.setHealth(BytesConvert.bytesToFloat(Arrays.copyOfRange(bytes, 20, 24)));
 
         compactModel.setCheckSum(BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 24, 26)));
 
@@ -110,19 +106,15 @@ public class CompactModel {
 
         position = BytesConvert.fillShort(compactModel.speed, bytes, position);
 
-        position = BytesConvert.fillShort(compactModel.health, bytes, position);
+        position = BytesConvert.fillShort(compactModel.getBufferSize(), bytes, position);
 
-        position = BytesConvert.fillInt(compactModel.padding, bytes, position);
+        position = BytesConvert.fillFloat(compactModel.health, bytes, position);
 
         position = BytesConvert.fillShort(compactModel.checkSum, bytes, position);
 
         position = BytesConvert.fillShort(compactModel.end, bytes, position);
 
         return bytes;
-    }
-
-
-    public CompactModel() {
     }
 
     @Override
@@ -134,25 +126,16 @@ public class CompactModel {
                 ", seconds=" + seconds +
                 ", compactNumber=" + compactNumber +
                 ", padding0=" + padding0 +
-                ", seq=" + seq +
-                ", orderNumber=" + orderNumber +
-                ", bulklength=" + bulklength +
                 ", id=" + id +
                 ", speed=" + speed +
+                ", bufferSize=" + bufferSize +
                 ", health=" + health +
-                ", padding=" + padding +
                 ", checkSum=" + checkSum +
                 ", end=" + end +
                 '}';
     }
 
-
-    public short getPadding0() {
-        return padding0;
-    }
-
-    public void setPadding0(short padding0) {
-        this.padding0 = padding0;
+    public CompactModel() {
     }
 
     public short getStart() {
@@ -195,28 +178,12 @@ public class CompactModel {
         this.compactNumber = compactNumber;
     }
 
-    public short getSeq() {
-        return seq;
+    public short getPadding0() {
+        return padding0;
     }
 
-    public void setSeq(short seq) {
-        this.seq = seq;
-    }
-
-    public short getOrderNumber() {
-        return orderNumber;
-    }
-
-    public void setOrderNumber(short orderNumber) {
-        this.orderNumber = orderNumber;
-    }
-
-    public short getBulklength() {
-        return bulklength;
-    }
-
-    public void setBulklength(short bulklength) {
-        this.bulklength = bulklength;
+    public void setPadding0(short padding0) {
+        this.padding0 = padding0;
     }
 
     public int getId() {
@@ -235,20 +202,20 @@ public class CompactModel {
         this.speed = speed;
     }
 
-    public short getHealth() {
+    public short getBufferSize() {
+        return bufferSize;
+    }
+
+    public void setBufferSize(short bufferSize) {
+        this.bufferSize = bufferSize;
+    }
+
+    public float getHealth() {
         return health;
     }
 
-    public void setHealth(short health) {
+    public void setHealth(float health) {
         this.health = health;
-    }
-
-    public int getPadding() {
-        return padding;
-    }
-
-    public void setPadding(int padding) {
-        this.padding = padding;
     }
 
     public short getCheckSum() {
@@ -266,5 +233,4 @@ public class CompactModel {
     public void setEnd(short end) {
         this.end = end;
     }
-
 }

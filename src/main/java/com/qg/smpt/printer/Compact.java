@@ -39,6 +39,8 @@ public class Compact {
 
     private CompactMapper compactMapper;
 
+
+
     private final Logger LOGGER = Logger.getLogger(PrinterProcessor.class);
 
 
@@ -57,18 +59,25 @@ public class Compact {
      * 4. 主控板进行签约确认并进行订单的下发（在PrinterProcessor的sign方法中体现）
      * @param urg
      */
-    public void sendOrdersByCompact(int userId, int urg, List<Order> orders){
+    public int sendOrdersByCompact(int userId, int urg, List<Order> orders){
+
 
         SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
         SqlSession sqlSession = sqlSessionFactory.openSession();
         compactMapper = sqlSession.getMapper(CompactMapper.class);
 
+        //缓存存入合同网即将进行投标的打印机
         int compactNumber = compactMapper.selectMaxCompact()+1;
         List<Printer> printers = new ArrayList<Printer>();
         synchronized (ShareMem.compactPrinter) {
             ShareMem.compactPrinter.put((short) compactNumber, printers);
         }
+        //获取该份订单需要几个打印能力
+        int printerCapacity = compactMapper.getPrinterCapacityByOrderNumber(orders.size());
+        sqlSession.commit();
+        sqlSession.close();
 
+        //进行招标
         callForBid(userId,urg, (short) compactNumber);
 
         //投标的策略为：只限定主控板在某一时间内发送标书，逾期不候
@@ -78,33 +87,33 @@ public class Compact {
             LOGGER.log(Level.DEBUG, "[招标]等待投标时出现了错误");
         }
 
-        if (ShareMem.compactPrinter.get((short)compactNumber).size() == 0) return ;
+        if (ShareMem.compactPrinter.get((short)compactNumber).size() == 0) return -1 ;
 
-        judge(orders,urg,compactNumber);
+        judge(orders,urg,compactNumber,printerCapacity);
 
+        return compactNumber;
     }
 
     /***
      * 解约
      * @param compactNumber
      */
-    public void removeSign(int compactNumber){
-        List<Printer> printers = ShareMem.compactPrinter.get((short) compactNumber);
+    public void removeSign(int compactNumber,Printer printer){
+
         CompactModel compactModel = new CompactModel();
         compactModel.setType(BConstants.removeSignRequest);
         compactModel.setCompactNumber((short)compactNumber);
         compactModel.setCheckSum((short)0);
         byte[] compactBytes = CompactModel.compactToBytes(compactModel);
 
-        for (Printer printer : printers){
-            SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
-            try {
-                socketChannel.write(ByteBuffer.wrap(compactBytes));
-                LOGGER.log(Level.DEBUG, "[解约]成功向主控板[{0}]发送合同网解约报文",printer.getId());
-            } catch (IOException e) {
-                LOGGER.log(Level.ERROR, "[解约]发送合同网解约报文发生错误");
-            }
+        SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
+        try {
+            socketChannel.write(ByteBuffer.wrap(compactBytes));
+            LOGGER.log(Level.DEBUG, "[解约]成功向主控板[{0}]发送合同网解约报文",printer.getId());
+        } catch (IOException e) {
+            LOGGER.log(Level.ERROR, "[解约]发送合同网解约报文发生错误");
         }
+
     }
 
     /***
@@ -151,69 +160,114 @@ public class Compact {
     /***
      * 进行标书的评审和中标操作
      */
-    public void judge(List<Order> orders,int urg,int compactNumber){
-        SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
-        SqlSession sqlSession = sqlSessionFactory.openSession();
-        compactMapper = sqlSession.getMapper(CompactMapper.class);
-
-        LOGGER.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审");
-        int allOrdersNum = orders.size();
-
+    public void judge(List<Order> orders,int urg,int compactNumber, int printerCapacity){
+        LOGGER.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审并对进行投标的打印机进行筛选");
         List<Printer> printers = ShareMem.compactPrinter.get((short)compactNumber);
-        double sumPrice = 0;
-        for (Printer printer : printers){
-            sumPrice += printer.getPrice();
+        //进行信任度的降序排序
+        SortList<Printer> sortList = new SortList<Printer>();
+        sortList.Sort(printers, "getCre", "desc");
+        //缓存存入经过筛选参与合同网的打印机
+        List<Printer> compactOfPrinter = new ArrayList<Printer>();
+        synchronized (ShareMem.compactOfPrinter) {
+            ShareMem.compactOfPrinter.put((short) compactNumber, compactOfPrinter);
         }
-        //总代价为0说明当前主控板下无打印机连接 无法进行打印任务
-        if (sumPrice==0) return;
-        int pos = 0;
-        int seq = 1;
-
-        for (Printer printer : printers){
-            sqlSession = sqlSessionFactory.openSession();
-            compactMapper = sqlSession.getMapper(CompactMapper.class);
-            double orderNumOfDouble =  (printer.getPrice() / sumPrice * allOrdersNum);
-            int orderNumber = new BigDecimal(orderNumOfDouble).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
-
-            List<Order> smallOrders = orders.subList(pos,pos+orderNumber);    //截取一个小批次
-            pos += orderNumber;
-            BulkOrder bOrders = ordersToBulk(smallOrders,printer);       //组装一个批次
-            printer.increaseBulkId();                                    //打印机打印批次加一
-            bOrders.setId(printer.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
-
-
-            synchronized (ShareMem.priBulkMap) {
-                ShareMem.priBulkMap.put(printer,bOrders);
+        int capacity = 0;
+        //对投标的打印机进行筛选，选出参与合同网的打印机,即中标的打印机
+        for (Printer p : printers){
+            capacity += p.getSpeed();
+            compactOfPrinter.add(p);
+            if (capacity>=printerCapacity) break;
+        }
+        //将订单存入缓存
+            synchronized (ShareMem.compactBulkMap) {
+                List<Order> compactOrders = ShareMem.compactBulkMap.get(compactNumber);
+                if (compactOrders == null){
+                    compactOrders = new ArrayList<Order>();
+                    ShareMem.compactBulkMap.put(compactNumber,compactOrders);
+                }
+                compactOrders.addAll(orders);
             }
-
-            //构建合同网中标报文
+        //对中标的打印机发送中标报文
+        for (Printer p : compactOfPrinter){
             CompactModel compactModel = new CompactModel();
             compactModel.setType(BConstants.winABid);
             compactModel.setUrg((byte) urg);
             compactModel.setCompactNumber((short) compactNumber);
             compactModel.setCheckSum((short)0);
-            compactModel.setSeq((short) seq);
-            compactModel.setOrderNumber((short) smallOrders.size());
-            compactModel.setId(printer.getId());
-            //记录在数据库中 // TODO: 2017/11/16
-            try {
-                compactMapper.addCompact(compactModel);
-            }finally {
-                sqlSession.commit();
-                sqlSession.close();
-            }
-
+            compactModel.setId(p.getId());
             byte[] compactBytes = CompactModel.compactToBytes(compactModel);
 
-            SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
+            SocketChannel socketChannel = ShareMem.priSocketMap.get(p);
             try {
                 socketChannel.write(ByteBuffer.wrap(compactBytes));
-                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{1}]",printer.getId(),smallOrders.size());
+                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文",p.getId());
             } catch (IOException e) {
                 LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
             }
-            seq++;
+
         }
+
+//        SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
+//        SqlSession sqlSession = sqlSessionFactory.openSession();
+//        compactMapper = sqlSession.getMapper(CompactMapper.class);
+//
+//        LOGGER.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审");
+//        int allOrdersNum = orders.size();
+//
+//        double sumPrice = 0;
+//        for (Printer printer : printers){
+//            sumPrice += printer.getPrice();
+//        }
+//        //总代价为0说明当前主控板下无打印机连接 无法进行打印任务
+//        if (sumPrice==0) return;
+//        int pos = 0;
+//        int seq = 1;
+//
+//        for (Printer printer : printers){
+//            sqlSession = sqlSessionFactory.openSession();
+//            compactMapper = sqlSession.getMapper(CompactMapper.class);
+//            double orderNumOfDouble =  (printer.getPrice() / sumPrice * allOrdersNum);
+//            int orderNumber = new BigDecimal(orderNumOfDouble).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+//
+//            List<Order> smallOrders = orders.subList(pos,pos+orderNumber);    //截取一个小批次
+//            pos += orderNumber;
+//            BulkOrder bOrders = ordersToBulk(smallOrders,printer);       //组装一个批次
+//            printer.increaseBulkId();                                    //打印机打印批次加一
+//            bOrders.setId(printer.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
+//
+//
+//            synchronized (ShareMem.priBulkMap) {
+//                ShareMem.priBulkMap.put(printer,bOrders);
+//            }
+//
+//            //构建合同网中标报文
+//            CompactModel compactModel = new CompactModel();
+//            compactModel.setType(BConstants.winABid);
+//            compactModel.setUrg((byte) urg);
+//            compactModel.setCompactNumber((short) compactNumber);
+//            compactModel.setCheckSum((short)0);
+////            compactModel.setSeq((short) seq);
+////            compactModel.setOrderNumber((short) smallOrders.size());
+//            compactModel.setId(printer.getId());
+//            //记录在数据库中 // TODO: 2017/11/16
+//            try {
+//                compactMapper.addCompact(compactModel);
+//            }finally {
+//                sqlSession.commit();
+//                sqlSession.close();
+//            }
+//
+//            byte[] compactBytes = CompactModel.compactToBytes(compactModel);
+//
+//            SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
+//            try {
+//                socketChannel.write(ByteBuffer.wrap(compactBytes));
+//                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{1}]",printer.getId(),smallOrders.size());
+//            } catch (IOException e) {
+//                LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
+//            }
+//            seq++;
+//        }
 
         return;
 
@@ -356,5 +410,84 @@ public class Compact {
             return -1;
         }
         return getPrinterIdByMaxCreForBulk(userId);
+    }
+
+    /***
+     * 动态调控参与合同网的主控板
+     * @param lastTime
+     * @param compactNumber
+     * @return
+     */
+    public static long dynamicManage(long lastTime, int compactNumber){
+        if (lastTime == 0) lastTime = System.currentTimeMillis();
+        //5s为一个监控周期
+        if (System.currentTimeMillis()-lastTime > 5 * 1000){
+            int printerCapacityNeed = 0;
+            //获取合同网中的订单缓存
+            List<Order> compactOrders = ShareMem.compactBulkMap.get(compactNumber);
+            //获取所需要的打印能力
+            SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
+            SqlSession sqlSession = sqlSessionFactory.openSession();
+            CompactMapper compactMapper = sqlSession.getMapper(CompactMapper.class);
+            try {
+                printerCapacityNeed = compactMapper.getPrinterCapacityByOrderNumber(compactOrders.size());
+            }finally {
+                sqlSession.commit();
+                sqlSession.close();
+            }
+            //获取当前的打印能力
+            int printerCapacity = 0;
+            List<Printer> printers = ShareMem.compactOfPrinter.get(compactNumber);
+            for (Printer p : printers){
+                printerCapacity+=p.getSpeed();
+            }
+
+            //如果当前的打印能力大于所需的打印能力，则解约部分主控板
+            if (printerCapacity > printerCapacityNeed){
+                Compact compact = new Compact();
+                //首先对主控板的打印能力进行升序
+                SortList<Printer> sortList = new SortList<Printer>();
+                sortList.Sort(printers, "getSpeed", "asc");
+                while (printerCapacity > printerCapacityNeed){
+                    //如果解约部分主控板后依赖大于所需打印能力，则继续解约，否则退出循环
+                    if (printerCapacity - printers.get(0).getSpeed() > printerCapacityNeed){
+                        compact.removeSign(compactNumber,printers.get(0));
+                        printers.remove(0);
+                        printerCapacity = printerCapacity - printers.get(0).getSpeed();
+                    }else break;
+                }
+            }
+            //如果当前的打印能力小于所需的打印能力，则需要再进行签约
+            if (printerCapacity < printerCapacityNeed){
+                Compact compact = new Compact();
+                //先获得之前投标了的主控板集合
+                List<Printer> compactPrinter = ShareMem.compactPrinter.get(compactNumber);
+                for (Printer p : compactPrinter){
+                    //如果满足了需要的打印能力，则退出遍历
+                    if (!(printerCapacity < printerCapacityNeed)) break;
+                    //判断此时是否已经参与合同网
+                    if (printers.contains(p)) continue;
+                    printers.add(p);
+                    printerCapacity += p.getSpeed();
+
+                    CompactModel compactModel = new CompactModel();
+                    compactModel.setType(BConstants.winABid);
+                    compactModel.setCompactNumber((short) compactNumber);
+                    compactModel.setCheckSum((short)0);
+                    compactModel.setId(p.getId());
+                    byte[] compactBytes = CompactModel.compactToBytes(compactModel);
+
+                    SocketChannel socketChannel = ShareMem.priSocketMap.get(p);
+                    try {
+                        socketChannel.write(ByteBuffer.wrap(compactBytes));
+                    } catch (IOException e) {
+                    }
+                }
+            }
+
+            lastTime = System.currentTimeMillis();
+        }
+
+        return lastTime;
     }
 }

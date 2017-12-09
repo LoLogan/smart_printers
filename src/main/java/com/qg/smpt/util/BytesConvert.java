@@ -22,6 +22,13 @@ public final class BytesConvert {
         return getInt(bytes);
     }
 
+    public static float bytesToFloat(byte[] bytes) {
+        if (bytes.length != 4) {
+            return -1;
+        }
+        return getFloat(bytes);
+    }
+
     private static short getShort(byte[] bytes) {
         ByteBuffer bb = ByteBuffer.allocate(2);
         bb.order(ByteOrder.BIG_ENDIAN);
@@ -40,8 +47,19 @@ public final class BytesConvert {
         return bb.getInt(0);
     }
 
+    private static float getFloat(byte[] bytes) {
+        ByteBuffer bb = ByteBuffer.allocateDirect(4);
+        bb.put(bytes);
+        bb.rewind();
+        return bb.getFloat();
+    }
+
     public static byte[] intToBytes(int number) {
         return ByteBuffer.allocate(4).putInt(number).array();
+    }
+
+    public static byte[] floatToBytes(float number) {
+        return ByteBuffer.allocate(4).putFloat(number).array();
     }
 
     public static byte[] shortToBytes(short number) {
@@ -61,6 +79,15 @@ public final class BytesConvert {
     public static int fillInt (int number, byte[] bytes, int start) {
 
         byte[] b = intToBytes(number);
+
+        System.arraycopy(b, 0, bytes, start, b.length);
+
+        return start + b.length;
+    }
+
+    public static int fillFloat (float number, byte[] bytes, int start) {
+
+        byte[] b = floatToBytes(number);
 
         System.arraycopy(b, 0, bytes, start, b.length);
 

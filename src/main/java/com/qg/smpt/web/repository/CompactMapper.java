@@ -48,4 +48,11 @@ public interface CompactMapper {
      * @return
      */
     double getPriById(@Param("id") int id);
+
+    /***
+     * 根据订单份数来获取需要的打印机台数
+     * @param orderNumber
+     * @return
+     */
+    int getPrinterCapacityByOrderNumber(@Param("id") int orderNumber);
 }

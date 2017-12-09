@@ -28,8 +28,8 @@ public class CompactMapperTest {
     public void addCompact() throws Exception {
         CompactModel compactModel = new CompactModel();
         compactModel.setCompactNumber((short) (compactMapper.selectMaxCompact()+1));
-        compactModel.setSeq((short) 1);
-        compactModel.setOrderNumber((short) 100);
+//        compactModel.setSeq((short) 1);
+//        compactModel.setOrderNumber((short) 100);
         compactModel.setId(5);
         System.out.println(compactMapper.addCompact(compactModel));
     }

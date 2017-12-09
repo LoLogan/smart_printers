@@ -39,4 +39,10 @@
         FROM printer
         WHERE id = #{id};
     </select>
+
+    <select id="getPrinterCapacityByOrderNumber" resultType="int">
+        SELECT printer_capacity
+        FROM capacity
+        WHERE order_number = #{order_number};
+    </select>
 </mapper>

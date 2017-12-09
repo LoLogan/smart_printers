@@ -66,9 +66,11 @@ public final class ShareMem {
      * 合同网下新增共享变量
      */
 
-    public static Map<Printer, BulkOrder> priBulkMap = null;                // 主控板-打印批次
+    public static Map<Integer, List<Order>> compactBulkMap = null;                // 合同网-对应订单列表
 
-    public static Map<Short, List<Printer>> compactPrinter = null;        //合同号-参与此合同的主控板
+    public static Map<Short, List<Printer>> compactPrinter = null;                 //合同号-进行投标了的主控板
+
+    public static Map<Short, List<Printer>> compactOfPrinter = null;                 //合同号-已经进行筛选后参与此合同网的主控板
 
     public static Map<Integer, OrdersDispatcher> userIdOrdersDispatcher = null;   //用户id和对应的订单委派调度线程
 
@@ -94,7 +96,7 @@ public final class ShareMem {
 
         priSocketMap = new HashMap<Printer, SocketChannel>();
 
-        priBulkMap = new HashMap<Printer, BulkOrder>();
+        compactBulkMap = new HashMap<Integer, List<Order>>();
 
         compactPrinter = new HashMap<Short, List<Printer>>();
 

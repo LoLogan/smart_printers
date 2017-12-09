@@ -170,11 +170,12 @@ public class PrinterController {
 	 * @param
 	 * @return
 	 */
-	@RequestMapping(value="/printer/remove/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@RequestMapping(value="/printer/remove/{number}/{printerId}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
 	@ResponseBody
-	public String removeSign(@PathVariable int number) {
+	public String removeSign(@PathVariable int number, @PathVariable int printerId) {
 		Compact compact = new Compact();
-		compact.removeSign(number);
+		Printer p = ShareMem.printerIdMap.get(printerId);
+		compact.removeSign(number,p);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 }
