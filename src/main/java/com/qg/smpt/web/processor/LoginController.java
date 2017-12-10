@@ -85,6 +85,13 @@ public class LoginController {
 		if(status.equals(Constant.SUCCESS)) {
 			 HttpSession session = request.getSession();
 			 session.setAttribute("user", loginUser);
+
+			loginUser.getLogoB();
+			LOGGER.debug("该用户的id为" + loginUser.getId().toString());
+			synchronized (ShareMem.userIdMap) {
+				ShareMem.userIdMap.put(loginUser.getId(), loginUser);
+			}
+
 			//给用户订单委派器，用于循环查看当前的订单存量,直到session为止
 			OrdersDispatcher ordersDispatcher = new OrdersDispatcher(loginUser.getId());
 			ordersDispatcher.threadStart();
@@ -96,15 +103,6 @@ public class LoginController {
 			cookie.setPath("/");
 			response.addCookie(cookie);
 
-			User u = ShareMem.userIdMap.get(user.getId());
-            loginUser.getLogoB();
-			if(u != null) {
-
-				LOGGER.debug("该用户的id为" + loginUser.getId().toString());
-				synchronized (ShareMem.userIdMap) {
-					ShareMem.userIdMap.put(loginUser.getId(), loginUser);
-				}
-			}
 			 return "redirect:/html/order_index.html?userId=" + loginUser.getId();
 			 
 		}else{
