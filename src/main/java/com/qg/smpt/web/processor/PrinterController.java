@@ -178,4 +178,21 @@ public class PrinterController {
 		compact.removeSign(number,p);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
+
+	/***
+	 * 测试接口，多台主控板平均分配订单，用于测试订单跟踪
+	 * @param
+	 * @return
+	 */
+	@RequestMapping(value="/printer/test/{userId}/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@ResponseBody
+	public String test(@PathVariable int userId, @PathVariable int number) {
+		Compact compact = new Compact();
+		List<Order> orders = new ArrayList<Order>();
+		for (int i = 0; i<number; i++){
+			orders.add(OrderBuilder.produceOrder(false,false));
+		}
+		compact.test(userId,orders);
+		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
+	}
 }

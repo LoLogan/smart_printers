@@ -19,10 +19,10 @@
                 credibility = #{credibility},
             </if>
             <if test="speed != null ">
-                 speed = #{speed},
+                speed = #{speed},
             </if>
             <if test="price != null ">
-                 price = #{price}
+                price = #{price}
             </if>
         </set>
         WHERE id = #{id}
@@ -43,6 +43,6 @@
     <select id="getPrinterCapacityByOrderNumber" resultType="int">
         SELECT printer_capacity
         FROM capacity
-        WHERE order_number = #{order_number};
+        WHERE order_number = #{orderNumber};
     </select>
 </mapper>

@@ -167,8 +167,9 @@ public class Compact {
         SortList<Printer> sortList = new SortList<Printer>();
         sortList.Sort(printers, "getCre", "desc");
         //缓存存入经过筛选参与合同网的打印机
-        List<Printer> compactOfPrinter = new ArrayList<Printer>();
-        synchronized (ShareMem.compactOfPrinter) {
+        List<Printer> compactOfPrinter = ShareMem.compactOfPrinter.get(compactNumber);
+        if (compactOfPrinter==null) {
+            compactOfPrinter = new ArrayList<Printer>();
             ShareMem.compactOfPrinter.put((short) compactNumber, compactOfPrinter);
         }
         int capacity = 0;
@@ -179,14 +180,14 @@ public class Compact {
             if (capacity>=printerCapacity) break;
         }
         //将订单存入缓存
-            synchronized (ShareMem.compactBulkMap) {
-                List<Order> compactOrders = ShareMem.compactBulkMap.get(compactNumber);
-                if (compactOrders == null){
-                    compactOrders = new ArrayList<Order>();
-                    ShareMem.compactBulkMap.put(compactNumber,compactOrders);
-                }
-                compactOrders.addAll(orders);
+        synchronized (ShareMem.compactBulkMap) {
+            List<Order> compactOrders = ShareMem.compactBulkMap.get(compactNumber);
+            if (compactOrders == null){
+                compactOrders = new ArrayList<Order>();
+                ShareMem.compactBulkMap.put((short)compactNumber,compactOrders);
             }
+            compactOrders.addAll(orders);
+        }
         //对中标的打印机发送中标报文
         for (Printer p : compactOfPrinter){
             CompactModel compactModel = new CompactModel();
@@ -490,4 +491,46 @@ public class Compact {
 
         return lastTime;
     }
+
+    /***
+     * 测试接口，多台主控板平均分配订单，用于测试订单跟踪
+     * @param userId
+     * @param orders
+     */
+    public void test(int userId,List<Order> orders){
+        User user = ShareMem.userIdMap.get(userId);
+        List<Printer> printers = user.getPrinters();
+        int printerSize = printers.size();
+        int ordersSize = orders.size();
+        int pos = 0;
+        int number = ordersSize/printerSize;
+        for (Printer p : printers){
+            SocketChannel socketChannel = ShareMem.priSocketMap.get(p);
+            try {
+                List<Order> smallOrders = orders.subList(pos,number);
+                pos+=number;
+
+                BulkOrder bOrders = ordersToBulk(smallOrders,p);            //订单组装成一个批次
+                p.increaseBulkId();                                    //打印机打印批次加一
+                bOrders.setId(p.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
+
+                List<BulkOrder> bulkOrderList = ShareMem.priSentQueueMap.get(p);
+
+                if (bulkOrderList == null) {
+                    bulkOrderList = new ArrayList<BulkOrder>();
+                    ShareMem.priSentQueueMap.put(p, bulkOrderList);
+                }
+                bulkOrderList.add(bOrders);
+                LOGGER.log(Level.DEBUG, "[批次]将批次[{0}] 存入已发送队列",bOrders.getId());
+
+                BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
+                byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
+
+                socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
+            } catch (IOException e) {
+            }
+        }
+
+    }
+
 }

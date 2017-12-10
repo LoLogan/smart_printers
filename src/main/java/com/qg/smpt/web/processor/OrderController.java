@@ -63,14 +63,20 @@ public class OrderController {
 		for (Order o : order){
 			checkOrder(user,o);
 		}
-
+		OrdersDispatcher ordersDispatcher = ShareMem.userIdOrdersDispatcher.get(userId);
+		if (ordersDispatcher == null){
+			OrdersDispatcher o = new OrdersDispatcher(userId);
+			o.threadStart();
+			ShareMem.userIdOrdersDispatcher.put(userId,o);
+		}
 		try {
+
+			List<Order> orders = ShareMem.userOrderBufferMap.get(userId);
+			if (orders == null) {
+				orders = new ArrayList<Order>();
+				ShareMem.userOrderBufferMap.put(userId, orders);
+			}
 			synchronized (ShareMem.userOrderBufferMap.get(userId)) {
-				List<Order> orders = ShareMem.userOrderBufferMap.get(userId);
-				if (orders == null) {
-					orders = new ArrayList<Order>();
-					ShareMem.userOrderBufferMap.put(userId, orders);
-				}
 				orders.addAll(order);
 
 				ShareMem.userOrderBufferMap.get(userId).notify();
@@ -94,21 +100,21 @@ public class OrderController {
 //			HttpSession session = request.getSession();
 //			User user = (User)session.getAttribute("user");
 //			int userId = ((user != null) ? user.getId() : 0);
-			
+
 			LOGGER.log(Level.DEBUG, "前台传来的json数据为 {0},当前用户为[{1}]", data, userId);
-			
+
 			User user = userService.queryById(userId);
-			
+
 			// 将订单数据转化为订单对象
 			Order order = (Order)JsonUtil.jsonToObject(data, Order.class);
-			
+
 			// 检查订单信息，无错则执行下订订单，有则返回错误状态
 			String status = (checkOrder(user, order) ? orderService.bookOrder(userId, order, -1) : Constant.ERROR);
-			
+
 			int retcode = status.equals(Constant.SUCCESS)? Constant.TRUE : Constant.FALSE;
-			
+
 			LOGGER.log(Level.DEBUG, "下单处理的结果为[{0}]", status);
-			
+
 			return JsonUtil.jsonToMap(new String[]{"retcode","status"}, new Object[]{retcode,status});
 		}catch(Exception e){
 			LOGGER.log(Level.DEBUG,"用户[{0}]下单出现了错误", userId, e);
@@ -145,10 +151,10 @@ public class OrderController {
 			return JsonUtil.jsonToMap(new String[]{"retcode","status"}, new Object[]{0,Constant.ERROR});
 		}
 	}
-	
+
 	private boolean checkOrder(User user, Order order) {
 		// 检查订单内容
-		
+
 		// 检查商家信息
 		if(user != null) {
 			synchronized(ShareMem.class) {
@@ -160,11 +166,11 @@ public class OrderController {
 			order.setClientTelephone(user.getUserPhone());
 			return true;
 		}
-		
+
 		return false;
 	}
-	
-	
+
+
 	/**
 	 * 通过用户id获取商家的已打印的订单
 	 * @return
@@ -176,23 +182,23 @@ public class OrderController {
 //		HttpSession session = request.getSession();
 //		User user = (User)session.getAttribute("user");
 //		int userId = ((user != null) ? user.getId() : 0);
-		
+
 		LOGGER.log(Level.DEBUG, "正在查询 用户[{0}] 的已打印订单", userId);
-		
+
 		// 根据用户id获取订单
 		List<Order> orderList = orderService.queryByUser(userId);
-		
-		String json =  JsonUtil.jsonToMap(new String[]{"retcode","data"}, 
+
+		String json =  JsonUtil.jsonToMap(new String[]{"retcode","data"},
 				new Object[]{Constant.TRUE,orderList});
-		
+
 		LOGGER.log(Level.DEBUG, "当前转化的信息为 [{0}]", json);
-		
+
 		return json;
-		
-		
+
+
 	}
-	
-	
+
+
 	/**
 	 * 获取正在打印/未打印的订单状态
 	 * @param userId - 用户id
@@ -205,11 +211,11 @@ public class OrderController {
 //		HttpSession session = request.getSession();
 //		User user = (User)session.getAttribute("user");
 //		int userId = ((user != null) ? user.getId() : 0);
-		
-		
+
+
 		// info message
 		LOGGER.log(Level.DEBUG, "正在查询 用户[{0}] 的未打印/正在打印订单", userId);
-		
+
 		// get printers by userId
 		User user = ShareMem.userIdMap.get(userId);
 		List<Printer> printers = null;
@@ -223,22 +229,22 @@ public class OrderController {
 		// if has object, install orderList
 		if(!checkNormal(printers)) {
 			LOGGER.log(Level.DEBUG, "当前用户[{0}]没有打印机设备连入", userId);
-			return JsonUtil.jsonToMap(new String[]{"retcode","data"}, 
+			return JsonUtil.jsonToMap(new String[]{"retcode","data"},
 					new String[]{String.valueOf(Constant.TRUE),"[]"});
 		}
-		
+
 		// install orderList
 		List<Order> orderList = installOrders(userId, printers);
-		
-		
-		String json =  JsonUtil.jsonToMap(new String[]{"retcode","data"}, 
+
+
+		String json =  JsonUtil.jsonToMap(new String[]{"retcode","data"},
 				new Object[]{Constant.TRUE,orderList});
-		
+
 		LOGGER.log(Level.DEBUG, "当前转化的信息为 [{0}]", json);
-		
+
 		return json;
 	}
-	
+
 
 	/**
 	 * 检查打印机集合是否为空
@@ -248,7 +254,7 @@ public class OrderController {
 	private boolean checkNormal(List<Printer> printers) {
 		if(printers == null || printers.isEmpty())
 			return false;
-		
+
 		return true;
 	}
 
@@ -298,9 +304,9 @@ public class OrderController {
 //				OrdersError = bulk.getOrders();
 //				fillOrders(OrdersError, orderList);
 //			}
-			
+
 		}
-		
+
 		return orderList;
 	}
 
@@ -313,7 +319,7 @@ public class OrderController {
 	private void fillOrders(List<Order> srcList, List<Order> descList) {
 		descList.addAll(srcList);
 	}
-	
+
 
 	@RequestMapping(value="/{printerId}/{orderId}" ,produces="application/json;charset=UTF-8",method = RequestMethod.GET )
 	@ResponseBody
@@ -323,12 +329,12 @@ public class OrderController {
 	}
 
 
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 }
 
 

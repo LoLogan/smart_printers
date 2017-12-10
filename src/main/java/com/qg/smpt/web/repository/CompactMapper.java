@@ -54,5 +54,5 @@ public interface CompactMapper {
      * @param orderNumber
      * @return
      */
-    int getPrinterCapacityByOrderNumber(@Param("id") int orderNumber);
+    int getPrinterCapacityByOrderNumber(@Param("orderNumber") int orderNumber);
 }
