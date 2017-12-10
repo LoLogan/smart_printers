@@ -58,6 +58,11 @@ public class OrderController {
 	@RequestMapping(value="bulkOrder/{userId}", method=RequestMethod.POST, produces="application/json;charset=utf-8")
 	@ResponseBody
 	public String bulkOrder(@PathVariable int userId, @RequestBody List<Order> order) {
+		User user = ShareMem.userIdMap.get(userId);
+
+		for (Order o : order){
+			checkOrder(user,o);
+		}
 
 		try {
 			synchronized (ShareMem.userOrderBufferMap.get(userId)) {

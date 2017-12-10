@@ -346,7 +346,7 @@ public class Compact {
 
         BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
         byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
-        DebugUtil.printBytes(bBulkOrderBytes);
+//        DebugUtil.printBytes(bBulkOrderBytes);
         SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
         try {
             socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
