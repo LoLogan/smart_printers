@@ -61,9 +61,11 @@ public class OrdersDispatcher implements Runnable{
             speedSum += p.getSpeed();
         }
         if (speedSum != 0)
+            //// TODO: 2017/12/11 MAX_NUM还需要再进行确定 
             MAX_NUM = speedSum * 5;
 
         while (flag) {
+
             MAX_NUM = 10;
             try{
                 synchronized (ShareMem.userOrderBufferMap.get(userId)) {
@@ -72,14 +74,13 @@ public class OrdersDispatcher implements Runnable{
 
                         if (compactNumber == -1) {
                             LOGGER.log(Level.DEBUG, "合同网发生错误");
-                            return;
                         }
 
                         //合同网内部的订单转移，将用户的订单队列转移到合同网队列里
                         List<Order> orders = ShareMem.userOrderBufferMap.get(userId);
 
                         synchronized (ShareMem.compactBulkMap.get((short)compactNumber)) {
-                            List<Order> compactOrders = ShareMem.compactBulkMap.get(compactNumber);
+                            List<Order> compactOrders = ShareMem.compactBulkMap.get((short)compactNumber);
                             if (compactOrders == null){
                                 compactOrders = new ArrayList<Order>();
                                 ShareMem.compactBulkMap.put((short)compactNumber,compactOrders);
@@ -88,7 +89,7 @@ public class OrdersDispatcher implements Runnable{
                         }
                         orders.clear();
 
-                        //lastTime = Compact.dynamicManage(lastTime, compactNumber);
+                        lastTime = Compact.dynamicManage(lastTime, compactNumber);
                         if (ShareMem.compactOfPrinter.get((short)compactNumber).size()==0)
                             user.setCompact(false);
 

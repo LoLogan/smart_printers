@@ -48,10 +48,13 @@ public final class BytesConvert {
     }
 
     private static float getFloat(byte[] bytes) {
-        ByteBuffer bb = ByteBuffer.allocateDirect(4);
-        bb.put(bytes);
-        bb.rewind();
-        return bb.getFloat();
+        ByteBuffer bb = ByteBuffer.allocate(4);
+        bb.order(ByteOrder.BIG_ENDIAN);
+        bb.put(bytes[0]);
+        bb.put(bytes[1]);
+        bb.put(bytes[2]);
+        bb.put(bytes[3]);
+        return bb.getFloat(0);
     }
 
     public static byte[] intToBytes(int number) {

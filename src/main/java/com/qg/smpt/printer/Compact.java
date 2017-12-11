@@ -7,11 +7,8 @@ import com.qg.smpt.printer.model.BOrder;
 import com.qg.smpt.printer.model.CompactModel;
 import com.qg.smpt.share.ShareMem;
 import com.qg.smpt.util.*;
-import com.qg.smpt.web.model.BulkOrder;
-import com.qg.smpt.web.model.Order;
-import com.qg.smpt.web.model.Printer;
+import com.qg.smpt.web.model.*;
 
-import com.qg.smpt.web.model.User;
 import com.qg.smpt.web.repository.CompactMapper;
 import com.qg.smpt.web.repository.UserMapper;
 import org.apache.ibatis.reflection.SystemMetaObject;
@@ -44,10 +41,9 @@ public class Compact {
     private final Logger LOGGER = Logger.getLogger(PrinterProcessor.class);
 
 
-    public static void main(String[] args){
+    public static int capacitySum = 0;      //用于动态调控主控板时记录5次所需的打印能力的总和，以便求平均值
 
-
-    }
+    public static int capacityRecord = 1;           //用于记录当前是一个周期中的第几次求当前打印能力
 
 
 
@@ -73,7 +69,7 @@ public class Compact {
             ShareMem.compactPrinter.put((short) compactNumber, printers);
         }
         //获取该份订单需要几个打印能力
-        int printerCapacity = compactMapper.getPrinterCapacityByOrderNumber(orders.size());
+        int printerCapacity = orders.size()/Constants.ORDERS_FOR_A_CAPACITY+1;
         sqlSession.commit();
         sqlSession.close();
 
@@ -82,7 +78,7 @@ public class Compact {
 
         //投标的策略为：只限定主控板在某一时间内发送标书，逾期不候
         try {
-            sleep(2000);
+            sleep(2 * 5000);
         } catch (InterruptedException e) {
             LOGGER.log(Level.DEBUG, "[招标]等待投标时出现了错误");
         }
@@ -167,7 +163,7 @@ public class Compact {
         SortList<Printer> sortList = new SortList<Printer>();
         sortList.Sort(printers, "getCre", "desc");
         //缓存存入经过筛选参与合同网的打印机
-        List<Printer> compactOfPrinter = ShareMem.compactOfPrinter.get(compactNumber);
+        List<Printer> compactOfPrinter = ShareMem.compactOfPrinter.get((short)compactNumber);
         if (compactOfPrinter==null) {
             compactOfPrinter = new ArrayList<Printer>();
             ShareMem.compactOfPrinter.put((short) compactNumber, compactOfPrinter);
@@ -181,7 +177,7 @@ public class Compact {
         }
         //将订单存入缓存
         synchronized (ShareMem.compactBulkMap) {
-            List<Order> compactOrders = ShareMem.compactBulkMap.get(compactNumber);
+            List<Order> compactOrders = ShareMem.compactBulkMap.get((short)compactNumber);
             if (compactOrders == null){
                 compactOrders = new ArrayList<Order>();
                 ShareMem.compactBulkMap.put((short)compactNumber,compactOrders);
@@ -414,76 +410,79 @@ public class Compact {
     }
 
     /***
-     * 动态调控参与合同网的主控板
+     * 动态调控参与合同网的主控板(签约和解约)
      * @param lastTime
      * @param compactNumber
      * @return
      */
     public static long dynamicManage(long lastTime, int compactNumber){
         if (lastTime == 0) lastTime = System.currentTimeMillis();
-        //5s为一个监控周期
-        if (System.currentTimeMillis()-lastTime > 5 * 1000){
-            int printerCapacityNeed = 0;
-            //获取合同网中的订单缓存
-            List<Order> compactOrders = ShareMem.compactBulkMap.get(compactNumber);
-            //获取所需要的打印能力
-            SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
-            SqlSession sqlSession = sqlSessionFactory.openSession();
-            CompactMapper compactMapper = sqlSession.getMapper(CompactMapper.class);
-            try {
-                printerCapacityNeed = compactMapper.getPrinterCapacityByOrderNumber(compactOrders.size());
-            }finally {
-                sqlSession.commit();
-                sqlSession.close();
-            }
-            //获取当前的打印能力
-            int printerCapacity = 0;
-            List<Printer> printers = ShareMem.compactOfPrinter.get(compactNumber);
-            for (Printer p : printers){
-                printerCapacity+=p.getSpeed();
-            }
+        //4s为一个监控周期
+        if (System.currentTimeMillis()-lastTime > 4 * 1000){
 
-            //如果当前的打印能力大于所需的打印能力，则解约部分主控板
-            if (printerCapacity > printerCapacityNeed){
-                Compact compact = new Compact();
-                //首先对主控板的打印能力进行升序
-                SortList<Printer> sortList = new SortList<Printer>();
-                sortList.Sort(printers, "getSpeed", "asc");
-                while (printerCapacity > printerCapacityNeed){
-                    //如果解约部分主控板后依赖大于所需打印能力，则继续解约，否则退出循环
-                    if (printerCapacity - printers.get(0).getSpeed() > printerCapacityNeed){
-                        compact.removeSign(compactNumber,printers.get(0));
-                        printers.remove(0);
-                        printerCapacity = printerCapacity - printers.get(0).getSpeed();
-                    }else break;
-                }
-            }
-            //如果当前的打印能力小于所需的打印能力，则需要再进行签约
-            if (printerCapacity < printerCapacityNeed){
-                Compact compact = new Compact();
-                //先获得之前投标了的主控板集合
-                List<Printer> compactPrinter = ShareMem.compactPrinter.get(compactNumber);
-                for (Printer p : compactPrinter){
-                    //如果满足了需要的打印能力，则退出遍历
-                    if (!(printerCapacity < printerCapacityNeed)) break;
-                    //判断此时是否已经参与合同网
-                    if (printers.contains(p)) continue;
-                    printers.add(p);
+            if (capacityRecord != Constants.DYNAMICS_CYCLE) {
+
+                //获取合同网中的订单缓存
+                List<Order> compactOrders = ShareMem.compactBulkMap.get((short) compactNumber);
+                //获取当前所需要的打印能力
+                int printerCapacityNeed = compactOrders.size() / Constants.ORDERS_FOR_A_CAPACITY ;
+
+                capacitySum += printerCapacityNeed;     //累加 求平均值
+
+                capacityRecord++;
+            } else {
+                int capacityAverage = capacitySum / Constants.DYNAMICS_CYCLE;
+
+                //获取当前的打印能力
+                int printerCapacity = 0;
+                List<Printer> printers = ShareMem.compactOfPrinter.get((short)compactNumber);
+                for (Printer p : printers) {
                     printerCapacity += p.getSpeed();
+                }
 
-                    CompactModel compactModel = new CompactModel();
-                    compactModel.setType(BConstants.winABid);
-                    compactModel.setCompactNumber((short) compactNumber);
-                    compactModel.setCheckSum((short)0);
-                    compactModel.setId(p.getId());
-                    byte[] compactBytes = CompactModel.compactToBytes(compactModel);
-
-                    SocketChannel socketChannel = ShareMem.priSocketMap.get(p);
-                    try {
-                        socketChannel.write(ByteBuffer.wrap(compactBytes));
-                    } catch (IOException e) {
+                //如果当前的打印能力比所需的打印能力多2以上，则解约部分主控板
+                if (printerCapacity - capacityAverage >= 2){
+                    Compact compact = new Compact();
+                    //首先对主控板的打印能力进行升序
+                    SortList<Printer> sortList = new SortList<Printer>();
+                    sortList.Sort(printers, "getSpeed", "asc");
+                    while (printerCapacity - capacityAverage >= 2){
+                        //如果解约部分主控板后依赖大于所需打印能力，则继续解约，否则退出循环
+                        if (printerCapacity - printers.get(0).getSpeed() >= capacityAverage){
+                            compact.removeSign(compactNumber,printers.get(0));
+                            printerCapacity = printerCapacity - printers.get(0).getSpeed();
+//                            printers.remove(0);
+                        }else break;
                     }
                 }
+                //如果所需的打印能力比当前的打印能力大于2以上，则需要再进行签约
+                if (capacityAverage - printerCapacity >= 2){
+                    //先获得之前投标了的主控板集合
+                    List<Printer> compactPrinter = ShareMem.compactPrinter.get((short)compactNumber);
+                    for (Printer p : compactPrinter){
+                        //如果满足了需要的打印能力，则退出遍历
+                        if (!(printerCapacity < capacityAverage)) break;
+                        //判断此时是否已经参与合同网
+                        if (printers.contains(p)) continue;
+                        printers.add(p);
+                        printerCapacity += p.getSpeed();
+
+                        CompactModel compactModel = new CompactModel();
+                        compactModel.setType(BConstants.winABid);
+                        compactModel.setCompactNumber((short) compactNumber);
+                        compactModel.setCheckSum((short)0);
+                        compactModel.setId(p.getId());
+                        byte[] compactBytes = CompactModel.compactToBytes(compactModel);
+
+                        SocketChannel socketChannel = ShareMem.priSocketMap.get(p);
+                        try {
+                            socketChannel.write(ByteBuffer.wrap(compactBytes));
+                        } catch (IOException e) {
+                        }
+                    }
+                }
+                capacityRecord = 1;     //重置
+                capacitySum = 0;
             }
 
             lastTime = System.currentTimeMillis();
@@ -505,9 +504,9 @@ public class Compact {
         int pos = 0;
         int number = ordersSize/printerSize;
         for (Printer p : printers){
-            SocketChannel socketChannel = ShareMem.priSocketMap.get(p);
+            SocketChannel socketChannel = ShareMem.priSocketMap.get(ShareMem.printerIdMap.get(p.getId()));
             try {
-                List<Order> smallOrders = orders.subList(pos,number);
+                List<Order> smallOrders = orders.subList(pos,pos+number);
                 pos+=number;
 
                 BulkOrder bOrders = ordersToBulk(smallOrders,p);            //订单组装成一个批次

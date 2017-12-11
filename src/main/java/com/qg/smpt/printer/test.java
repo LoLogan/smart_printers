@@ -1,5 +1,7 @@
 package com.qg.smpt.printer;
 
+import com.qg.smpt.util.DebugUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,16 +10,12 @@ import java.util.List;
  */
 public class test {
     public static void main(String[] args) {
-        List a = new ArrayList();
-        a.add(1);
-        a.add(2);
-        List b = new ArrayList();
-        b.add(3);
-        b.add(4);
 
-        a.addAll(b);
-        a.removeAll(a.subList(a.size()-2,a.size()));
 
-        System.out.println(a);
+        byte[] b = new byte[4];
+        for (int i = 0; i < 4; i++) {
+            b[i] = (byte) ( Float.floatToIntBits(50) >> (24 - i * 8));
+        }
+        DebugUtil.printBytes(b);
     }
 }

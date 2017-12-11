@@ -187,6 +187,7 @@ public class PrinterConnector implements Runnable, Lifecycle{
                                 break;
                             }
                         }
+
                         if (p!=null){
                             SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
                             SqlSession sqlSession = sqlSessionFactory.openSession();
@@ -195,11 +196,12 @@ public class PrinterConnector implements Runnable, Lifecycle{
                             List<Printer> printers= ShareMem.userIdMap.get(userId).getPrinters();
                             printers.remove(p);
                             ShareMem.priSocketMap.remove(p);
+                            synchronized (p){
+                                p.notifyAll();
+                            }
                             ShareMem.printerIdMap.remove(p.getId());
                         }
-
                         sc.close();
-
 
                     } catch (IOException ee) {
                         LOGGER.log(Level.ERROR, "socket close exception", ee);

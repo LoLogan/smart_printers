@@ -59,7 +59,7 @@ public class OrderController {
 	@ResponseBody
 	public String bulkOrder(@PathVariable int userId, @RequestBody List<Order> order) {
 		User user = ShareMem.userIdMap.get(userId);
-
+		LOGGER.log(Level.DEBUG, "新接受的订单数目为：[{0}]", order.size());
 		for (Order o : order){
 			checkOrder(user,o);
 		}
