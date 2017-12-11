@@ -49,7 +49,7 @@ public class OrdersDispatcher implements Runnable{
 
     public void run() {
         long lastTime = 0;
-        int compactNumber = -1;     //初始化合同网序号
+        int compactNumber = 0;     //初始化合同网序号
         //标准值
         int standard = 0;
         Compact compact = new Compact();
@@ -70,11 +70,8 @@ public class OrdersDispatcher implements Runnable{
             try{
                 synchronized (ShareMem.userOrderBufferMap.get(userId)) {
                     //如果该商家已经用合同网分配订单了，则将新订单放置合同网处理
-                    if (user.isCompact()){
+                    if (user.isCompact() && compactNumber!=-1){
 
-                        if (compactNumber == -1) {
-                            LOGGER.log(Level.DEBUG, "合同网发生错误");
-                        }
 
                         //合同网内部的订单转移，将用户的订单队列转移到合同网队列里
                         List<Order> orders = ShareMem.userOrderBufferMap.get(userId);

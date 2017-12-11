@@ -8,8 +8,8 @@
     </select>
 
     <insert id="addCompact" parameterType="com.qg.smpt.printer.Compact">
-      INSERT INTO compact(compact_number, seq, order_number, printer_id)
-      VALUE (#{compact.compactNumber}, #{compact.seq}, #{compact.orderNumber}, #{compact.id})
+      INSERT INTO compact(compact_number)
+      VALUE (#{compact.compactNumber})
     </insert>
 
     <update id="updatePrinter">

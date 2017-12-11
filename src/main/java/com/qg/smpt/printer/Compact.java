@@ -126,6 +126,16 @@ public class Compact {
         compactModel.setSeconds((int) System.currentTimeMillis());
         compactModel.setCheckSum((short)0);
 
+        SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        compactMapper = sqlSession.getMapper(CompactMapper.class);
+        try {
+            compactMapper.addCompact(compactModel);
+        } finally {
+            sqlSession.commit();
+            sqlSession.close();
+        }
+
         byte[] compactBytes = CompactModel.compactToBytes(compactModel);
 
         LOGGER.log(Level.ERROR, "----------------------[招标]合同网报文字节开始----------------------");
