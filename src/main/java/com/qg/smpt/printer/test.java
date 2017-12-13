@@ -1,7 +1,10 @@
 package com.qg.smpt.printer;
 
 import com.qg.smpt.util.DebugUtil;
+import com.qg.smpt.util.TimeConvert;
+import org.apache.ibatis.reflection.SystemMetaObject;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,10 +15,13 @@ public class test {
     public static void main(String[] args) {
 
 
-        byte[] b = new byte[4];
-        for (int i = 0; i < 4; i++) {
-            b[i] = (byte) ( Float.floatToIntBits(50) >> (24 - i * 8));
-        }
-        DebugUtil.printBytes(b);
+
+//        byte[] b = new byte[4];
+//        for (int i = 0; i < 4; i++) {
+//            b[i] = (byte) ( Float.floatToIntBits(50) >> (24 - i * 8));
+//        }
+//        DebugUtil.printBytes(b);
+
+        System.out.println(TimeConvert.getTimeCurrent());
     }
 }

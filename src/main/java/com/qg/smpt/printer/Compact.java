@@ -513,33 +513,34 @@ public class Compact {
         int ordersSize = orders.size();
         int pos = 0;
         int number = ordersSize/printerSize;
-        for (Printer p : printers){
-            SocketChannel socketChannel = ShareMem.priSocketMap.get(ShareMem.printerIdMap.get(p.getId()));
-            try {
-                List<Order> smallOrders = orders.subList(pos,pos+number);
-                pos+=number;
+        for (Printer p : printers) {
+            if (ShareMem.priSocketMap.get(ShareMem.printerIdMap.get(p.getId())) != null) {
+                SocketChannel socketChannel = ShareMem.priSocketMap.get(ShareMem.printerIdMap.get(p.getId()));
+                try {
+                    List<Order> smallOrders = orders.subList(pos, pos + number);
+                    pos += number;
 
-                BulkOrder bOrders = ordersToBulk(smallOrders,p);            //订单组装成一个批次
-                p.increaseBulkId();                                    //打印机打印批次加一
-                bOrders.setId(p.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
+                    BulkOrder bOrders = ordersToBulk(smallOrders, p);            //订单组装成一个批次
+                    p.increaseBulkId();                                    //打印机打印批次加一
+                    bOrders.setId(p.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
 
-                List<BulkOrder> bulkOrderList = ShareMem.priSentQueueMap.get(p);
+                    List<BulkOrder> bulkOrderList = ShareMem.priSentQueueMap.get(p);
 
-                if (bulkOrderList == null) {
-                    bulkOrderList = new ArrayList<BulkOrder>();
-                    ShareMem.priSentQueueMap.put(p, bulkOrderList);
+                    if (bulkOrderList == null) {
+                        bulkOrderList = new ArrayList<BulkOrder>();
+                        ShareMem.priSentQueueMap.put(p, bulkOrderList);
+                    }
+                    bulkOrderList.add(bOrders);
+                    LOGGER.log(Level.DEBUG, "[批次]将批次[{0}] 存入已发送队列", bOrders.getId());
+
+                    BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
+                    byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
+
+                    socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
+                } catch (IOException e) {
                 }
-                bulkOrderList.add(bOrders);
-                LOGGER.log(Level.DEBUG, "[批次]将批次[{0}] 存入已发送队列",bOrders.getId());
-
-                BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
-                byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
-
-                socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
-            } catch (IOException e) {
             }
         }
-
     }
 
 }

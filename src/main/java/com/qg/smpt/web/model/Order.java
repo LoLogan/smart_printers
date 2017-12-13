@@ -3,10 +3,7 @@ package com.qg.smpt.web.model;
 import com.qg.smpt.printer.model.BConstants;
 import com.qg.smpt.printer.model.BOrder;
 import com.qg.smpt.share.ShareMem;
-import com.qg.smpt.util.BytesConvert;
-import com.qg.smpt.util.DebugUtil;
-import com.qg.smpt.util.Level;
-import com.qg.smpt.util.Logger;
+import com.qg.smpt.util.*;
 import com.qg.smpt.web.model.Json.OrderSerializer;
 
 import java.io.UnsupportedEncodingException;
@@ -495,7 +492,7 @@ public final class Order {
         bo.setId(mpu);
 
         //设置时间戳
-        bo.setSeconds((int)(System.currentTimeMillis()));
+        bo.setSeconds(TimeConvert.getTimeCurrent());
 
         //设置订单序号
         bo.setOrderNumber(id);

@@ -5,6 +5,7 @@ import com.qg.smpt.printer.model.BOrder;
 import com.qg.smpt.util.BytesConvert;
 import com.qg.smpt.util.Level;
 import com.qg.smpt.util.Logger;
+import com.qg.smpt.util.TimeConvert;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -64,7 +65,7 @@ public final class BulkOrder {
         bBulk.setSize((short)(bulkOrder.getDataSize() + 20));
 
         //设置时间戳
-        bBulk.setSeconds((int)System.currentTimeMillis());
+        bBulk.setSeconds(TimeConvert.getTimeCurrent());
 
         //设置校验和
         bBulk.setCheckSum((short)0);
