@@ -58,7 +58,8 @@ public class OrdersDispatcher implements Runnable{
         //打印速度的总值，用来决定该用户处理能力，即订单上限值
         int speedSum = 0;
         for (Printer p : printers){
-            speedSum += p.getSpeed();
+            if (ShareMem.priSocketMap.containsKey(ShareMem.printerIdMap.get(p.getId())))
+                speedSum += p.getSpeed();
         }
         if (speedSum != 0)
             //// TODO: 2017/12/11 MAX_NUM还需要再进行确定 
