@@ -89,7 +89,48 @@ public class OrderController {
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 
+	/***
+	 * 批量下单入口,将订单存入缓存中
+	 * @param userId
+	 * @return
+	 */
+	@RequestMapping(value="sendOrder/{userId}/{number}", method=RequestMethod.POST, produces="application/json;charset=utf-8")
+	@ResponseBody
+	public String sendOrder(@PathVariable int userId,@PathVariable int number) {
 
+		List<Order> order = new ArrayList<Order>();
+		for (int i = 0; i<number; i++){
+			order.add(OrderBuilder.produceOrder(false,false));
+		}
+
+
+		LOGGER.log(Level.DEBUG, "新接受的订单数目为：[{0}]", order.size());
+
+		OrdersDispatcher ordersDispatcher = ShareMem.userIdOrdersDispatcher.get(userId);
+		if (ordersDispatcher == null){
+			OrdersDispatcher o = new OrdersDispatcher(userId);
+			o.threadStart();
+			ShareMem.userIdOrdersDispatcher.put(userId,o);
+		}
+		try {
+
+			List<Order> orders = ShareMem.userOrderBufferMap.get(userId);
+			if (orders == null) {
+				orders = new ArrayList<Order>();
+				ShareMem.userOrderBufferMap.put(userId, orders);
+			}
+			synchronized (ShareMem.userOrderBufferMap.get(userId)) {
+				orders.addAll(order);
+
+				ShareMem.userOrderBufferMap.get(userId).notify();
+			}
+
+		}catch (Exception e){
+			e.printStackTrace();
+			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"ERROR"});
+		}
+		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
+	}
 
 
 	@RequestMapping(value="/{userId}", method=RequestMethod.POST, produces="application/json;charset=utf-8")
