@@ -132,7 +132,7 @@ public class PrinterController {
 
 
 	/***
-	 * 发送合同网数据报文
+	 * 发送合同网数据报文，暂时不用
 	 * @param
 	 * @return
 	 */
@@ -155,8 +155,16 @@ public class PrinterController {
 	 */
 	@RequestMapping(value="/printer/sendBulk/{userId}/{flag}/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
 	@ResponseBody
-	public String sendBulk(@PathVariable int userId,@PathVariable int number,@PathVariable int flag) {
+	public String sendBulk(@PathVariable int userId,@PathVariable int number,@PathVariable int flag) {		//此处先设置简略的逻辑
+		if(ShareMem.userIdMap.get(userId)==null){
+			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"请先连接打印机"});
+		}
+
 		Compact compact = new Compact();
+		if (ShareMem.priSocketMap.get(compact.getMaxCreForBulkPrinter(userId))==null){
+			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"打印机目前已断开，请先连接打印机"});
+		}
+
 		List<Order> orders = new ArrayList<Order>();
 		for (int i = 0; i<number; i++){
 			orders.add(OrderBuilder.produceOrder(false,false));
@@ -165,19 +173,6 @@ public class PrinterController {
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 
-	/***
-	 * 直接解约数据报文
-	 * @param
-	 * @return
-	 */
-	@RequestMapping(value="/printer/remove/{number}/{printerId}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
-	@ResponseBody
-	public String removeSign(@PathVariable int number, @PathVariable int printerId) {
-		Compact compact = new Compact();
-		Printer p = ShareMem.printerIdMap.get(printerId);
-		compact.removeSign(number,p);
-		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
-	}
 
 	/***
 	 * 测试接口，多台主控板平均分配订单，用于测试订单跟踪
@@ -187,12 +182,38 @@ public class PrinterController {
 	@RequestMapping(value="/printer/test/{userId}/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
 	@ResponseBody
 	public String test(@PathVariable int userId, @PathVariable int number) {
+		//此处先设置简略的逻辑
+		if(ShareMem.userIdMap.get(userId)==null){
+			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"请先连接打印机"});
+		}
 		Compact compact = new Compact();
 		List<Order> orders = new ArrayList<Order>();
 		for (int i = 0; i<number; i++){
 			orders.add(OrderBuilder.produceOrder(false,false));
 		}
 		compact.test(userId,orders);
+		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
+	}
+
+
+	/***
+	 * 测试接口，指定某台打印机进行打印任务
+	 * @param
+	 * @return
+	 */
+	@RequestMapping(value="/printer/choicePrinter/{printerId}/{number}",  method=RequestMethod.GET ,produces="application/json;charset=UTF-8")
+	@ResponseBody
+	public String choicePrinter(@PathVariable int printerId, @PathVariable int number) {
+		//此处先设置简略的逻辑
+		if(ShareMem.priSocketMap.get(printerId)==null){
+			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"请先连接打印机"});
+		}
+		Compact compact = new Compact();
+		List<Order> orders = new ArrayList<Order>();
+		for (int i = 0; i<number; i++){
+			orders.add(OrderBuilder.produceOrder(false,false));
+		}
+		compact.sendByPrinter(printerId,orders);
 		return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"SUCCESS"});
 	}
 }

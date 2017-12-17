@@ -90,13 +90,18 @@ public class OrderController {
 	}
 
 	/***
-	 * 批量下单入口,将订单存入缓存中
+	 * 批量下单入口,将订单存入缓存中,利用数字
 	 * @param userId
 	 * @return
 	 */
 	@RequestMapping(value="sendOrder/{userId}/{number}", method=RequestMethod.POST, produces="application/json;charset=utf-8")
 	@ResponseBody
 	public String sendOrder(@PathVariable int userId,@PathVariable int number) {
+
+		//此处先设置简略的逻辑
+		if(ShareMem.userIdMap.get(userId)==null){
+			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"请先连接打印机"});
+		}
 
 		List<Order> order = new ArrayList<Order>();
 		for (int i = 0; i<number; i++){

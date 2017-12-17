@@ -64,4 +64,15 @@ public final class BOrderStatus extends AbstactStatus{
 
         return bos;
     }
+
+    @Override
+    public String toString() {
+        return "BOrderStatus{" +
+                "printerId=" + printerId +
+                ", seconds=" + seconds +
+                ", bulkId=" + bulkId +
+                ", inNumber=" + inNumber +
+                ", targetPrinterId=" + targetPrinterId +
+                '}';
+    }
 }
