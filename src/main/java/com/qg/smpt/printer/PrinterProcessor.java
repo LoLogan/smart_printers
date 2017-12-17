@@ -710,15 +710,30 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      * @param socketChannel
      */
     private void parseOrderStatus(byte[] bytes, SocketChannel socketChannel) {
-        BOrderStatus bOrderStatus = BOrderStatus.bytesToOrderStatus(bytes);
+
+        // 所有订单报文长度都是28字节
+        BOrderStatus bOrderStatus;
+
+        // 如果是订单转移按照24字节解析
+        if (bytes[3] == BConstants.orderMigrate) {
+            // todo : 此处输出是为了方便嵌入式查看，测试完后删除
+            System.out.println("===========进行订单转移报文解析===========");
+            bOrderStatus = BOrderStatus.bytesToOrderStatusWithRemoving(bytes);
+            // 将报文打印出来
+            System.out.println(DataUtil.byteArrayToHexStr(bytes));
+            // 报文转化信息可以在debug信息中查看
+            System.out.println("===========订单转移报文解析完成===========");
+        } else {
+            // 否则就按照状态报文20字节解析
+            bOrderStatus = BOrderStatus.bytesToOrderStatus(bytes);
+        }
+
 
         byte flag = (byte)(bOrderStatus.flag  & 0xFF);
 
         LOGGER.log(Level.DEBUG, "打印机id [{0}], 订单标志 : [{1}] , 订单发送时间戳 : [{2}], " +
                         "所属批次[{3}], 批次内序号 [{4}], 校验和 [{5}] 当前线程 [{6}]", bOrderStatus.printerId, flag,
                 bOrderStatus.seconds, bOrderStatus.bulkId, bOrderStatus.inNumber, bOrderStatus.checkSum, this.id);
-
-//        byte flag = (byte)(bOrderStatus.flag  & 0xFF);
 
         Printer printer = ShareMem.printerIdMap.get(bOrderStatus.printerId);
 

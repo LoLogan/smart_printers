@@ -17,6 +17,9 @@ public final class BOrderStatus extends AbstactStatus{
     public short bulkId;    // 批次id ; 低16bit
     public short inNumber;  // 批次内序号; 高16bit
 
+    // 暂时只适用于订单转移报文
+    public int targetPrinterId; // 目标主控板id
+
     public static BOrderStatus bytesToOrderStatus(byte[] bytes) {
 
         AbstactStatus status = AbstactStatus.bytesToAbstractStatus(bytes);
@@ -32,6 +35,32 @@ public final class BOrderStatus extends AbstactStatus{
         bos.bulkId = (short)( (status.line3 >> 16 ) & 0xFFFF) ;
 
         bos.inNumber = (short)(status.line3 & 0xFFFF);
+
+        return bos;
+    }
+
+    /**
+     * 解析订单转移报文
+     * @param bytes
+     * @return
+     */
+    public static BOrderStatus bytesToOrderStatusWithRemoving(byte[] bytes) {
+
+        AbstactStatus status = AbstactStatus.bytesToAbstractStatusWithRemoving(bytes);
+
+        BOrderStatus bos = new BOrderStatus();
+
+        bos.flag = status.flag;
+
+        bos.printerId = status.line1;
+
+        bos.seconds = status.line2;
+
+        bos.bulkId = (short)( (status.line3 >> 16 ) & 0xFFFF) ;
+
+        bos.inNumber = (short)(status.line3 & 0xFFFF);
+
+        bos.targetPrinterId = status.line4;
 
         return bos;
     }

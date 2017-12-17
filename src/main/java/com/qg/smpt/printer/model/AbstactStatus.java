@@ -18,6 +18,9 @@ public class AbstactStatus {
 
     public int line3;
 
+    // 订单转移报文新增字段
+    public int line4;
+
     public short checkSum;
 
     public final short end = BConstants.statusEnd;
@@ -37,6 +40,30 @@ public class AbstactStatus {
 
         return as;
     }
+
+    /**
+     * 解析订单转移报文
+     * @param bytes
+     * @return
+     */
+    protected static AbstactStatus bytesToAbstractStatusWithRemoving(byte[] bytes) {
+        AbstactStatus as = new AbstactStatus();
+
+        as.flag = BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 2, 4));
+
+        as.line1 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 4, 8));
+
+        as.line4 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 8, 12));
+
+        as.line2 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 12, 16));
+
+        as.line3 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 16, 20));
+
+        as.checkSum = BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 20, 22));
+
+        return as;
+    }
+
 
     /**
      * 测试使用
