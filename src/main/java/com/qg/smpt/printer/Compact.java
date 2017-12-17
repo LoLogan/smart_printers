@@ -316,7 +316,7 @@ public class Compact {
             //设置批次内的序号
             bOrder.inNumber = (short)bOrders.getOrders().size();
             //设置所属批次
-            bOrder.bulkId = (short)bOrders.getId();
+            bOrder.bulkId = (short)printer.getCurrentBulk();
 
             bOrders.getbOrders().add(bOrder);
             bOrders.getOrders().add(order);
@@ -515,9 +515,8 @@ public class Compact {
                 try {
                     List<Order> smallOrders = orders.subList(pos, pos + number);
                     pos += number;
-
+                    p.increaseBulkId();                                      //打印机打印批次加一
                     BulkOrder bOrders = ordersToBulk(smallOrders, p);            //订单组装成一个批次
-                    p.increaseBulkId();                                    //打印机打印批次加一
                     bOrders.setId(p.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
 
                     List<BulkOrder> bulkOrderList = ShareMem.priSentQueueMap.get(p);
@@ -567,7 +566,7 @@ public class Compact {
                     //更新所有订单的字节数（不包括批次报文）
                     bOrders.setDataSize(bOrders.getDataSize() + bOrder.size);
                     //设置所属批次
-                    bOrder.bulkId = (short) bOrders.getId();
+                    bOrder.bulkId = (short) printer.getCurrentBulk();
                     //设置批次内的序号
                     bOrder.inNumber = (short) bOrders.getOrders().size();
                     //为订单设置打印机
@@ -617,4 +616,4 @@ public class Compact {
 
     }
 
-    }
+}

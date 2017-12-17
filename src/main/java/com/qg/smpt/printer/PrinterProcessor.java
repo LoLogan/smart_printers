@@ -369,7 +369,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     List<Order> orderList = new ArrayList<Order>();
                     for (Order order : orders) {
                         BOrder bOrder = order.orderToBOrder((short) printer.getCurrentBulk(), (short) bOrders.getbOrders().size());
-                        if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()/5) break;
+                        if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()) break;
 
                         bOrders.getbOrders().add(bOrder);
                         bOrders.getOrders().add(order);
@@ -832,7 +832,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                         break;
                 }
 
-                LOGGER.log(Level.DEBUG, "订单内容 [{0}] 当前线程 [{1}]", order.toString(), this.id);
+//                LOGGER.log(Level.DEBUG, "订单内容 [{0}] 当前线程 [{1}]", order.toString(), this.id);
 
                 break;
             }

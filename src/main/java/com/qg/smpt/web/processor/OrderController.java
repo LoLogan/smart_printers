@@ -100,7 +100,7 @@ public class OrderController {
 
 		//此处先设置简略的逻辑
 		if(ShareMem.userIdMap.get(userId)==null){
-			return JsonUtil.jsonToMap(new String[]{"status"}, new Object[]{"请先连接打印机"});
+			return "打印机目前已断开，请先连接打印机";
 		}
 
 		List<Order> order = new ArrayList<Order>();
