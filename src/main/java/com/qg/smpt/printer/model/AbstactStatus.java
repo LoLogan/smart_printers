@@ -22,6 +22,9 @@ public class AbstactStatus {
 
     public final short end = BConstants.statusEnd;
 
+    // 打印机新报文(订单转移时使用)
+    public int line4;
+
     protected static AbstactStatus bytesToAbstractStatus(byte[] bytes) {
         AbstactStatus as = new AbstactStatus();
 
@@ -34,6 +37,30 @@ public class AbstactStatus {
         as.line3 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 12, 16));
 
         as.checkSum = BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 16, 18));
+
+        return as;
+    }
+
+    /**
+     * 为适应打印机订单转移新报文特的创建
+     * 报文长度 24 个字节
+     * @param bytes
+     * @return
+     */
+    protected static AbstactStatus bytesToAbstractStatusInRemoving(byte[] bytes) {
+        AbstactStatus as = new AbstactStatus();
+
+        as.flag = BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 2, 4));
+
+        as.line1 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 4, 8));
+
+        as.line4 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 8, 12));
+
+        as.line2 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 12, 16));
+
+        as.line3 = BytesConvert.bytesToInt(Arrays.copyOfRange(bytes, 16, 20));
+
+        as.checkSum = BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 20, 22));
 
         return as;
     }

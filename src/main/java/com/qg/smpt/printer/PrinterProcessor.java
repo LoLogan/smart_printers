@@ -20,6 +20,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import java.io.IOException;
 import java.io.Reader;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.sql.Time;
@@ -349,23 +350,26 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      * @param bytes
      * @param socketChannel
      */
-    private void sign(byte[] bytes, SocketChannel socketChannel){
+    private synchronized void sign(byte[] bytes, SocketChannel socketChannel){
+
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
         LOGGER.log(Level.DEBUG, "[签约确认]收到主控板[{0}]的签约确认，准备向其发送订单数据", compactModel.getId());
         Printer printer = ShareMem.printerIdMap.get(compactModel.getId());
+        printer.setCanAccept(true);
         //如果都主控板都解约了，则不需要继续进行订单的下发了 //
         while(ShareMem.priSocketMap.get(ShareMem.printerIdMap.get(compactModel.getId()))!=null && ShareMem.compactOfPrinter.get(compactModel.getCompactNumber()).contains(ShareMem.printerIdMap.get(compactModel.getId()))) {
-
-            BulkOrder bOrders = new BulkOrder(new ArrayList<BOrder>());
-            List<Order> orders = ShareMem.compactBulkMap.get((short)compactModel.getCompactNumber());
-            if (orders.size()!=0) {
+            synchronized (printer){
+                BulkOrder bOrders = new BulkOrder(new ArrayList<BOrder>());
+                List<Order> orders = ShareMem.compactBulkMap.get((short) compactModel.getCompactNumber());
+                if (orders.size()==0 || !printer.isCanAccept()) continue;
+//                if (orders.size() != 0) {
                 synchronized (orders) {
                     printer.increaseBulkId();
                     bOrders.setId(printer.getCurrentBulk());
                     List<Order> orderList = new ArrayList<Order>();
                     for (Order order : orders) {
                         BOrder bOrder = order.orderToBOrder((short) printer.getCurrentBulk(), (short) bOrders.getbOrders().size());
-                        if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()) break;
+                        if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()/5) break;
 
                         bOrders.getbOrders().add(bOrder);
                         bOrders.getOrders().add(order);
@@ -395,6 +399,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     }
                     bulkOrderList.add(bOrders);
                 }
+                if (bOrders.getDataSize()==0)continue;
 
                 //引用以前的批次报文，但是只用里边的data属性，data即是这个批次的订单报文数据
                 BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
@@ -406,17 +411,29 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 } catch (final IOException e) {
                     LOGGER.log(Level.ERROR, "[确认签约]发放任务时发生错误");
                 }
-            }
-            //进入睡眠，
-            synchronized (printer){
+//                }
+                LOGGER.log(Level.DEBUG, "[发放任务]主控板[{0}]不可接受新数据，进入睡眠",printer.getId());
+                printer.setCanAccept(false);
                 try {
                     printer.wait();
-                    LOGGER.log(Level.DEBUG, "[发放任务]发放任务时成功，进入睡眠");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                LOGGER.log(Level.DEBUG, "[发放任务]主控板[{0}]唤醒，可接受新数据",printer.getId());
             }
-            LOGGER.log(Level.DEBUG, "[发放任务]唤醒，继续发送订单");
+
+//                //进入睡眠，
+//                synchronized (printer) {
+//                    try {
+//                        printer.wait();
+//                        LOGGER.log(Level.DEBUG, "[发放任务]发放任务时成功，进入睡眠");
+//                        flag = 1;
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//                LOGGER.log(Level.DEBUG, "[发放任务]唤醒，继续发送订单");
+
         }
     }
 
@@ -561,6 +578,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         // 获取打印机主控板id,获取打印机
         int printerId = request.printerId;
 
+        LOGGER.log(Level.DEBUG, "------------------------------阈值请求----------------------------------------------" );
         LOGGER.log(Level.DEBUG, "解析请求打印机请求id:[{0}], flag:[{1}]," +
                         "seconds:[{2}];checksum [{3}]; 当前线程 [{4}]" , request.printerId, request.flag, request.seconds,
                 request.checkSum, this.id);
@@ -577,7 +595,9 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 return;
             }
         }
+
         synchronized (p){
+            p.setCanAccept(true);
             p.notifyAll();
         }
 
@@ -710,7 +730,20 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      * @param socketChannel
      */
     private void parseOrderStatus(byte[] bytes, SocketChannel socketChannel) {
-        BOrderStatus bOrderStatus = BOrderStatus.bytesToOrderStatus(bytes);
+
+        BOrderStatus bOrderStatus = null;
+        if (bytes.length == 24) {
+            // 接受到 24 字节的报文，为打印机订单转移报文
+            bOrderStatus = BOrderStatus.bytesToOrderStatusInRemoving(bytes);
+        } else {
+            bOrderStatus = BOrderStatus.bytesToOrderStatus(bytes);
+        }
+
+        if (bOrderStatus == null) {
+            BigInteger bigInteger = new BigInteger(1, bytes);
+            LOGGER.log(Level.WARN, "解析打印机订单状态失败，报文信息  " + bigInteger.toString(16));
+            throw new RuntimeException("运行出错，解析打印机订单状态失败");
+        }
 
         byte flag = (byte)(bOrderStatus.flag  & 0xFF);
 

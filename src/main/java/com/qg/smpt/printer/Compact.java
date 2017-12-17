@@ -102,7 +102,7 @@ public class Compact {
         compactModel.setCheckSum((short)0);
         byte[] compactBytes = CompactModel.compactToBytes(compactModel);
 
-        SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
+        SocketChannel socketChannel = ShareMem.priSocketMap.get(ShareMem.printerIdMap.get(printer.getId()));
         try {
             socketChannel.write(ByteBuffer.wrap(compactBytes));
             LOGGER.log(Level.DEBUG, "[解约]成功向主控板[{0}]发送合同网解约报文",printer.getId());
@@ -343,54 +343,54 @@ public class Compact {
             BulkOrder bOrders = new BulkOrder(new ArrayList<BOrder>());
 
 
-                synchronized (orders) {
-                    printer.increaseBulkId();
-                    bOrders.setId(printer.getCurrentBulk());
-                    List<Order> orderList = new ArrayList<Order>();
-                    for (Order order : orders) {
-                        BOrder bOrder = order.orderToBOrder((short) printer.getCurrentBulk(), (short) bOrders.getbOrders().size());
-                        if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()) break;
+            synchronized (orders) {
+                printer.increaseBulkId();
+                bOrders.setId(printer.getCurrentBulk());
+                List<Order> orderList = new ArrayList<Order>();
+                for (Order order : orders) {
+                    BOrder bOrder = order.orderToBOrder((short) printer.getCurrentBulk(), (short) bOrders.getbOrders().size());
+                    if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()) break;
 
-                        bOrders.getbOrders().add(bOrder);
-                        bOrders.getOrders().add(order);
-                        //更新所有订单的字节数（不包括批次报文）
-                        bOrders.setDataSize(bOrders.getDataSize() + bOrder.size);
-                        //设置所属批次
-                        bOrder.bulkId = (short) bOrders.getId();
-                        //设置批次内的序号
-                        bOrder.inNumber = (short) bOrders.getOrders().size();
-                        //为订单设置打印机
-                        order.setMpu(printer.getId());
-                        orderList.add(order);
-                    }
-                    orders.removeAll(orderList);
+                    bOrders.getbOrders().add(bOrder);
+                    bOrders.getOrders().add(order);
+                    //更新所有订单的字节数（不包括批次报文）
+                    bOrders.setDataSize(bOrders.getDataSize() + bOrder.size);
+                    //设置所属批次
+                    bOrder.bulkId = (short) bOrders.getId();
+                    //设置批次内的序号
+                    bOrder.inNumber = (short) bOrders.getOrders().size();
+                    //为订单设置打印机
+                    order.setMpu(printer.getId());
+                    orderList.add(order);
                 }
-                LOGGER.log(Level.DEBUG, "为打印机 [{0}] 分配任务, 订单缓冲队列 [{1}]，" +
-                                "批次号为 [{2}], 最后批次订单容量 [{3}] byte", printer.getId(),
-                        orders.size(), bOrders.getId(), bOrders.getDataSize());
+                orders.removeAll(orderList);
+            }
+            LOGGER.log(Level.DEBUG, "为打印机 [{0}] 分配任务, 订单缓冲队列 [{1}]，" +
+                            "批次号为 [{2}], 最后批次订单容量 [{3}] byte", printer.getId(),
+                    orders.size(), bOrders.getId(), bOrders.getDataSize());
 
 
-                //存入已发送队列
-                synchronized (ShareMem.priSentQueueMap.get(printer)) {
-                    List<BulkOrder> bulkOrderList = ShareMem.priSentQueueMap.get(printer);
-                    if (bulkOrderList == null) {
-                        bulkOrderList = new ArrayList<BulkOrder>();
-                        ShareMem.priSentQueueMap.put(printer, bulkOrderList);
-                    }
-                    bulkOrderList.add(bOrders);
+            //存入已发送队列
+            synchronized (ShareMem.priSentQueueMap.get(printer)) {
+                List<BulkOrder> bulkOrderList = ShareMem.priSentQueueMap.get(printer);
+                if (bulkOrderList == null) {
+                    bulkOrderList = new ArrayList<BulkOrder>();
+                    ShareMem.priSentQueueMap.put(printer, bulkOrderList);
                 }
+                bulkOrderList.add(bOrders);
+            }
 
-                //引用以前的批次报文，但是只用里边的data属性，data即是这个批次的订单报文数据
-                BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
-                byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
+            //引用以前的批次报文，但是只用里边的data属性，data即是这个批次的订单报文数据
+            BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
+            byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
 
-                try {
-                    SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
-                    socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
-                    LOGGER.log(Level.DEBUG, "[直接批次下单]发放任务时成功");
-                } catch (final IOException e) {
-                    LOGGER.log(Level.ERROR, "[直接批次下单]发放任务时发生错误");
-                }
+            try {
+                SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
+                socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
+                LOGGER.log(Level.DEBUG, "[直接批次下单]发放任务时成功");
+            } catch (final IOException e) {
+                LOGGER.log(Level.ERROR, "[直接批次下单]发放任务时发生错误");
+            }
 
             //进入睡眠，
             synchronized (printer){
@@ -612,7 +612,7 @@ public class Compact {
 
                     BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
                     byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
-
+//                    DebugUtil.printBytes(bBulkOrderBytes);
                     socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
                 } catch (IOException e) {
                 }

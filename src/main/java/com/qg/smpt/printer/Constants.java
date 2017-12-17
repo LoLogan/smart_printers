@@ -8,8 +8,8 @@ public class Constants {
 
     public static final short SEND_INTERVAL = 5000;         //两次发送间隔
 
-    public static final int ORDERS_FOR_A_CAPACITY = 20;     //一个打印能力对应的订单份数
+    public static final int ORDERS_FOR_A_CAPACITY = 3;     //一个打印能力对应的订单份数
 
-    public static final int DYNAMICS_CYCLE = 10;     //取平均数的周期
+    public static final int DYNAMICS_CYCLE = 3;     //取平均数的周期
 
 }

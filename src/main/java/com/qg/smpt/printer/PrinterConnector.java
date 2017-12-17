@@ -1,5 +1,6 @@
 package com.qg.smpt.printer;
 
+import com.qg.smpt.printer.model.BConstants;
 import com.qg.smpt.share.ShareMem;
 import com.qg.smpt.util.Level;
 import com.qg.smpt.util.Logger;
@@ -196,9 +197,9 @@ public class PrinterConnector implements Runnable, Lifecycle{
                             List<Printer> printers= ShareMem.userIdMap.get(userId).getPrinters();
                             printers.remove(p);
                             ShareMem.priSocketMap.remove(p);
-                            synchronized (p){
-                                p.notifyAll();
-                            }
+//                            synchronized (p){
+//                                p.notifyAll();
+//                            }
                             ShareMem.printerIdMap.remove(p.getId());
                         }
                         sc.close();

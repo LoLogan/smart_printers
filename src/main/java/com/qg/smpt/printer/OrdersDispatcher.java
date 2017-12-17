@@ -67,7 +67,7 @@ public class OrdersDispatcher implements Runnable{
 
         while (flag) {
 
-            MAX_NUM = 10;
+            MAX_NUM = 2;
             try{
                 synchronized (ShareMem.userOrderBufferMap.get(userId)) {
                     //如果该商家已经用合同网分配订单了，则将新订单放置合同网处理
@@ -84,6 +84,7 @@ public class OrdersDispatcher implements Runnable{
                                 ShareMem.compactBulkMap.put((short)compactNumber,compactOrders);
                             }
                             compactOrders.addAll(orders);
+                            ShareMem.compactBulkMap.get((short)compactNumber).notifyAll();
                         }
                         orders.clear();
 

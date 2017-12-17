@@ -6,7 +6,7 @@ import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import java.util.List;
 
 @JsonIgnoreProperties({"userId", "userName", "currentBulk", "currentOrder",
-		"canAccept","busy", "lastSendTime"})
+        "canAccept","busy", "lastSendTime"})
 public final class Printer {
     private long okTime;                    // 接收到 ok 请求的时间
 
@@ -32,6 +32,8 @@ public final class Printer {
     private Short speed;            //  打印速度/打印能力
     private Double price;           //  打印代价
     private Short bufferSize;     //主控板缓冲区大小
+
+
 
     public Short getBufferSize() {
         return bufferSize;
