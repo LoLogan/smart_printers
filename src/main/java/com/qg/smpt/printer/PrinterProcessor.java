@@ -739,13 +739,9 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             // todo : 此处输出是为了方便嵌入式查看，测试完后删除
             System.out.println("===========进行订单转移报文解析===========");
             bOrderStatus = BOrderStatus.bytesToOrderStatusWithRemoving(bytes);
-            // todo 批次订单号+1
-            // bOrderStatus.bulkId = (short)(bOrderStatus.bulkId + 1);
             // 将报文打印出来
             System.out.println(DataUtil.byteArrayToHexStr(bytes));
             // 报文转化信息可以在debug信息中查看
-            System.out.println("解析结果");
-            System.out.println(bOrderStatus.toString());
             System.out.println("===========订单转移报文解析完成===========");
         } else {
             // 否则就按照状态报文20字节解析
@@ -754,7 +750,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
 
         byte flag = (byte)(bOrderStatus.flag  & 0xFF);
-        System.out.println(flag);
 
         LOGGER.log(Level.DEBUG, "打印机id [{0}], 订单标志 : [{1}] , 订单发送时间戳 : [{2}], " +
                         "所属批次[{3}], 批次内序号 [{4}], 校验和 [{5}] 当前线程 [{6}]", bOrderStatus.printerId, flag,
@@ -775,7 +770,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         BulkOrder bulkOrderF = null; // 订单所在的批次订单
         Order order = null;          // 处理的订单
         BOrder bOrder = null;        // 处理的订单
-        int position = 0;              // 记录批次订单在缓存队列中的位置
+        int position;              // 记录批次订单在缓存队列中的位置
         for (position = 0; position < bulkOrderList.size(); position++) {
             bulkOrderF = bulkOrderList.get(position);
 //            LOGGER.log(Level.DEBUG,"寻找的批次订单号[{0}], 打印机发送的批次订单号 [{1}]", bulkOrderF.getId(), bOrderStatus.printerId);
@@ -837,7 +832,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                         break;
                 }
 
-//                LOGGER.log(Level.DEBUG, "订单内容 [{0}] 当前线程 [{1}]", order.toString(), this.id);
+                LOGGER.log(Level.DEBUG, "订单内容 [{0}] 当前线程 [{1}]", order.toString(), this.id);
 
                 break;
             }
@@ -854,7 +849,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
         /* 失败 重发数据*/
         if (flag == BConstants.orderMigrate) {
-            System.out.println("订单转移;");
             // todo : 该部分未与硬件端进行测试，此句测试后删除！
             // todo:考虑打印机报文问题！！！
 
@@ -877,8 +871,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             printer.increaseBulkId();
             bulkOrder.setId(printer.getCurrentBulk());
             bulkOrder.setUserId(bulkOrderF.getUserId());
-
-            int dataSize = 0;
 
             // 获取需要重新打印的订单
             long time = System.currentTimeMillis();
@@ -910,8 +902,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             bulkOrder.setDataSize(totalSize);
 
             /* 转化发送批次订单数据 */
-            BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bulkOrder, false);
-            byte[] bBulkOrderByters = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
+            byte[] bBulkOrderByters = BBulkOrder.bBulkOrderToBytes(BulkOrder.convertBBulkOrder(bulkOrder, false));
             // bBulkOrderByters[15] = (byte)0x1;
             LOGGER.log(Level.DEBUG, "打印机 [{0}] 重新发送批次转移订单 当前线程 [{1}]", bOrderStatus.printerId, this.id);
 //            DebugUtil.printBytes(bBulkOrderByters);
@@ -934,7 +925,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 Compact compact = new Compact();
                 // 获得最高信任度打印机 id
                 int printerId = compact.getMaxCreForBulkPrinter(userId);
-                System.out.println("id" + printerId);
                 Printer agent = ShareMem.printerIdMap.get(id);
                 LOGGER.log(Level.DEBUG, "打印机id === "+printerId);
                 SocketChannel printerChannel = ShareMem.priSocketMap.get(agent);
