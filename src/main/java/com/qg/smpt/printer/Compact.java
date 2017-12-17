@@ -333,10 +333,11 @@ public class Compact {
      * @param urg
      */
     public void sendBulkDitectly(int userId,int urg,List<Order> orders){
-        updatePrinterMsg();
+        updatePrinterMsg(userId);
         LOGGER.log(Level.DEBUG, "[直接批次下单]直接发送批次订单数据");
         int printerId = getPrinterIdByMaxCreForBulk(userId);                //获取信任度最大的打印机编号
         Printer printer = ShareMem.printerIdMap.get(printerId);      //获取打印机对象
+        if (printer.getBufferSize()==null)printer.setBufferSize((short) 5120);
 
         while(orders.size()!=0) {
 
@@ -436,18 +437,20 @@ public class Compact {
     /***
      * 更新，根据当前已连接的主控板id获取对应的信任度和代价
      */
-    private void updatePrinterMsg(){
+    private void updatePrinterMsg(int userId){
         SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
         SqlSession sqlSession = sqlSessionFactory.openSession();
         compactMapper = sqlSession.getMapper(CompactMapper.class);
 
-        for (Map.Entry<Integer, Printer> entry : ShareMem.printerIdMap.entrySet()){
-            try {
-                int id = entry.getKey();
-                entry.getValue().setCre(compactMapper.getCreById(id));
-                entry.getValue().setPrice(compactMapper.getPriById(id));
-            }finally {
-                sqlSession.commit();
+        for (Map.Entry<Integer, Printer> entry : ShareMem.printerIdMap.entrySet()) {
+            if (entry.getValue().getUserId() == userId) {
+                try {
+                    int id = entry.getKey();
+                    entry.getValue().setCre(compactMapper.getCreById(id));
+                    entry.getValue().setPrice(compactMapper.getPriById(id));
+                } finally {
+                    sqlSession.commit();
+                }
             }
         }
         sqlSession.close();

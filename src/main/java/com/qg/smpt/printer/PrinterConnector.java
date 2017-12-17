@@ -190,6 +190,13 @@ public class PrinterConnector implements Runnable, Lifecycle{
                         }
 
                         if (p!=null){
+                            LOGGER.log(Level.DEBUG, "主控板[{0}]断开连接",p.getId());
+                            for (Map.Entry<Short, List<Printer>> entry : ShareMem.compactOfPrinter.entrySet()){
+                                if(entry.getValue().contains(p)){
+                                    entry.getValue().remove(p);
+                                }
+                            }
+
                             SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
                             SqlSession sqlSession = sqlSessionFactory.openSession();
                             PrinterMapper printerMapper = sqlSession.getMapper(PrinterMapper.class);
@@ -197,9 +204,9 @@ public class PrinterConnector implements Runnable, Lifecycle{
                             List<Printer> printers= ShareMem.userIdMap.get(userId).getPrinters();
                             printers.remove(p);
                             ShareMem.priSocketMap.remove(p);
-//                            synchronized (p){
-//                                p.notifyAll();
-//                            }
+                            synchronized (p){
+                                p.notifyAll();
+                            }
                             ShareMem.printerIdMap.remove(p.getId());
                         }
                         sc.close();

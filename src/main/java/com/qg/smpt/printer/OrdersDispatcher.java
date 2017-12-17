@@ -55,19 +55,15 @@ public class OrdersDispatcher implements Runnable{
         Compact compact = new Compact();
         User user = ShareMem.userIdMap.get(userId);
         List<Printer> printers = user.getPrinters();
-        //打印速度的总值，用来决定该用户处理能力，即订单上限值
-        int speedSum = 0;
-        for (Printer p : printers){
-            if (ShareMem.priSocketMap.containsKey(ShareMem.printerIdMap.get(p.getId())))
-                speedSum += p.getSpeed();
-        }
+        //信任度最佳打印机的打印速度，用来决定该用户处理能力，即订单上限值
+        int speedSum = ShareMem.printerIdMap.get(compact.getMaxCreForBulkPrinter(userId)).getSpeed();
+
         if (speedSum != 0)
-            //// TODO: 2017/12/11 MAX_NUM还需要再进行确定 
-            MAX_NUM = speedSum * 5;
+            //// TODO: 2017/12/11 MAX_NUM还需要再进行确定
+            MAX_NUM = speedSum * Constants.ORDERS_FOR_A_CAPACITY;
 
         while (flag) {
 
-            MAX_NUM = 2;
             try{
                 synchronized (ShareMem.userOrderBufferMap.get(userId)) {
                     //如果该商家已经用合同网分配订单了，则将新订单放置合同网处理
@@ -111,6 +107,7 @@ public class OrdersDispatcher implements Runnable{
                                 LOGGER.log(Level.DEBUG, "紧张状态，启用合同网，当前standard的值为[{0}]", standard);
                                 compactNumber =  compact.sendOrdersByCompact(userId, 0, orders);
                                 user.setCompact(true);
+                                standard = 0;
                             } else {
                                 //直接委派打印机下单
                                 LOGGER.log(Level.DEBUG, "紧张状态，直接委派打印机下单，当前standard的值为[{0}]", standard);

@@ -312,7 +312,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         printer.setSpeed(compactModel.getSpeed());
 
         //计算信任度
-        Double credibility =(BConstants.initialCre + BConstants.alpha*printer.getPrintSuccessNum()-BConstants.beta*printer.getPrintErrorNum())*compactModel.getHealth();
+        Double credibility =(BConstants.initialCre + BConstants.alpha*printer.getPrintSuccessNum()-BConstants.beta*printer.getPrintErrorNum());
 
         //存储信任度
         printer.setCre(credibility);
@@ -416,7 +416,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 printer.setCanAccept(false);
                 try {
                     printer.wait();
-                    LOGGER.log(Level.DEBUG, "[发放任务]发放任务时成功，进入睡眠");
+                    LOGGER.log(Level.DEBUG, "[发放任务]唤醒，继续发送订单");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
