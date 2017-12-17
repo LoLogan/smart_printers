@@ -18,12 +18,12 @@ public class AbstactStatus {
 
     public int line3;
 
+    // 订单转移报文新增字段
+    public int line4;
+
     public short checkSum;
 
     public final short end = BConstants.statusEnd;
-
-    // 打印机新报文(订单转移时使用)
-    public int line4;
 
     protected static AbstactStatus bytesToAbstractStatus(byte[] bytes) {
         AbstactStatus as = new AbstactStatus();
@@ -42,12 +42,11 @@ public class AbstactStatus {
     }
 
     /**
-     * 为适应打印机订单转移新报文特的创建
-     * 报文长度 24 个字节
+     * 解析订单转移报文
      * @param bytes
      * @return
      */
-    protected static AbstactStatus bytesToAbstractStatusInRemoving(byte[] bytes) {
+    protected static AbstactStatus bytesToAbstractStatusWithRemoving(byte[] bytes) {
         AbstactStatus as = new AbstactStatus();
 
         as.flag = BytesConvert.bytesToShort(Arrays.copyOfRange(bytes, 2, 4));
@@ -64,6 +63,7 @@ public class AbstactStatus {
 
         return as;
     }
+
 
     /**
      * 测试使用

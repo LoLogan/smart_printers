@@ -416,10 +416,10 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 printer.setCanAccept(false);
                 try {
                     printer.wait();
+                    LOGGER.log(Level.DEBUG, "[发放任务]发放任务时成功，进入睡眠");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                LOGGER.log(Level.DEBUG, "[发放任务]主控板[{0}]唤醒，可接受新数据",printer.getId());
             }
 
 //                //进入睡眠，
@@ -731,27 +731,29 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      */
     private void parseOrderStatus(byte[] bytes, SocketChannel socketChannel) {
 
-        BOrderStatus bOrderStatus = null;
-        if (bytes.length == 24) {
-            // 接受到 24 字节的报文，为打印机订单转移报文
-            bOrderStatus = BOrderStatus.bytesToOrderStatusInRemoving(bytes);
+        // 所有订单报文长度都是28字节
+        BOrderStatus bOrderStatus;
+
+        // 如果是订单转移按照24字节解析
+        if (bytes[3] == BConstants.orderMigrate) {
+            // todo : 此处输出是为了方便嵌入式查看，测试完后删除
+            System.out.println("===========进行订单转移报文解析===========");
+            bOrderStatus = BOrderStatus.bytesToOrderStatusWithRemoving(bytes);
+            // 将报文打印出来
+            System.out.println(DataUtil.byteArrayToHexStr(bytes));
+            // 报文转化信息可以在debug信息中查看
+            System.out.println("===========订单转移报文解析完成===========");
         } else {
+            // 否则就按照状态报文20字节解析
             bOrderStatus = BOrderStatus.bytesToOrderStatus(bytes);
         }
 
-        if (bOrderStatus == null) {
-            BigInteger bigInteger = new BigInteger(1, bytes);
-            LOGGER.log(Level.WARN, "解析打印机订单状态失败，报文信息  " + bigInteger.toString(16));
-            throw new RuntimeException("运行出错，解析打印机订单状态失败");
-        }
 
         byte flag = (byte)(bOrderStatus.flag  & 0xFF);
 
         LOGGER.log(Level.DEBUG, "打印机id [{0}], 订单标志 : [{1}] , 订单发送时间戳 : [{2}], " +
                         "所属批次[{3}], 批次内序号 [{4}], 校验和 [{5}] 当前线程 [{6}]", bOrderStatus.printerId, flag,
                 bOrderStatus.seconds, bOrderStatus.bulkId, bOrderStatus.inNumber, bOrderStatus.checkSum, this.id);
-
-//        byte flag = (byte)(bOrderStatus.flag  & 0xFF);
 
         Printer printer = ShareMem.printerIdMap.get(bOrderStatus.printerId);
 
