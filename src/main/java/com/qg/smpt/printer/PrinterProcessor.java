@@ -759,7 +759,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
         /* 获取批次订单队列 flag 0x5 : 获取异常批次订单队列; others : 获取已发送批次订单队列 */
         List<BulkOrder> bulkOrderList = null;
-        if ( flag == BConstants.orderInQueue || flag == BConstants.orderFail || flag == BConstants.orderTyping
+        if (flag == BConstants.orderMigrate || flag == BConstants.orderInQueue || flag == BConstants.orderFail || flag == BConstants.orderTyping
                 || flag == BConstants.orderDataW || flag == BConstants.orderSucc) {
             // 获取已发队列数据
             bulkOrderList = ShareMem.priSentQueueMap.get(printer);
@@ -770,7 +770,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         BulkOrder bulkOrderF = null; // 订单所在的批次订单
         Order order = null;          // 处理的订单
         BOrder bOrder = null;        // 处理的订单
-        int position = 0;              // 记录批次订单在缓存队列中的位置
+        int position;              // 记录批次订单在缓存队列中的位置
         for (position = 0; position < bulkOrderList.size(); position++) {
             bulkOrderF = bulkOrderList.get(position);
 //            LOGGER.log(Level.DEBUG,"寻找的批次订单号[{0}], 打印机发送的批次订单号 [{1}]", bulkOrderF.getId(), bOrderStatus.printerId);
@@ -867,7 +867,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
             // 加急处理设置
             bulkOrder.setBulkType((short) 1);
-            bulkOrder.setDataSize(totalSize);
             printer.increaseBulkId();
             bulkOrder.setId(printer.getCurrentBulk());
             bulkOrder.setUserId(bulkOrderF.getUserId());
@@ -899,10 +898,11 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             // 将订单封装到批次中
             bulkOrder.getbOrders().addAll(bOrderList);
             bulkOrder.getOrders().addAll(orderList);
+            bulkOrder.setDataSize(totalSize);
 
             /* 转化发送批次订单数据 */
-            byte[] bBulkOrderByters = BBulkOrder.bBulkOrderToBytes(BulkOrder.convertBBulkOrder(bulkOrder, true));
-            bBulkOrderByters[15] = (byte)0x1;
+            byte[] bBulkOrderByters = BBulkOrder.bBulkOrderToBytes(BulkOrder.convertBBulkOrder(bulkOrder, false));
+            // bBulkOrderByters[15] = (byte)0x1;
             LOGGER.log(Level.DEBUG, "打印机 [{0}] 重新发送批次转移订单 当前线程 [{1}]", bOrderStatus.printerId, this.id);
 //            DebugUtil.printBytes(bBulkOrderByters);
 
