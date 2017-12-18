@@ -95,10 +95,9 @@ public class OrdersDispatcher implements Runnable{
                         if (number > MAX_NUM) {
                             //达到上限值，立即启用合同网
                             LOGGER.log(Level.DEBUG, "达到订单上限值，启用合同网");
-                            List<Order> bulkOrders = orders.subList(number - MAX_NUM, number);
-                            compactNumber = compact.sendOrdersByCompact(userId, 0, bulkOrders);
+                            compactNumber = compact.sendOrdersByCompact(userId, 0, orders);
                             user.setCompact(true);
-                            orders.removeAll(bulkOrders);
+                            orders.clear();
                         } else if (number <= MAX_NUM && number > MAX_NUM / 2) {
                             //处于紧张状态，直接委派打印机下单，如果长期处于这种状态则通过合同网进行下单
                             if (standard >= MAX_TIME) {

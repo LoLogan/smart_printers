@@ -204,6 +204,7 @@ public class PrinterConnector implements Runnable, Lifecycle{
                             List<Printer> printers= ShareMem.userIdMap.get(userId).getPrinters();
                             printers.remove(p);
                             ShareMem.priSocketMap.remove(p);
+                            ShareMem.priSentQueueMap.remove(p);
                             synchronized (p){
                                 p.notifyAll();
                             }

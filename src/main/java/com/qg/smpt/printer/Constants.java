@@ -10,6 +10,6 @@ public class Constants {
 
     public static final int ORDERS_FOR_A_CAPACITY = 10;     //一个打印能力对应的订单份数
 
-    public static final int DYNAMICS_CYCLE = 5;     //取平均数的周期
+    public static final int DYNAMICS_CYCLE = 20;     //取平均数的周期
 
 }

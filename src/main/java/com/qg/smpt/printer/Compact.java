@@ -422,13 +422,17 @@ public class Compact {
                 //获取合同网中的订单缓存
                 List<Order> compactOrders = ShareMem.compactBulkMap.get((short) compactNumber);
                 //获取当前所需要的打印能力
-                int printerCapacityNeed = compactOrders.size() / Constants.ORDERS_FOR_A_CAPACITY ;
+                int printerCapacityNeed = 0;
+                if (compactOrders.size()!=0)
+                 printerCapacityNeed = compactOrders.size() / Constants.ORDERS_FOR_A_CAPACITY + 1;
 
                 capacitySum += printerCapacityNeed;     //累加 求平均值
 
                 capacityRecord++;
             } else {
-                int capacityAverage = capacitySum / Constants.DYNAMICS_CYCLE;
+                int capacityAverage = 0;
+                if (capacitySum!=0)
+                capacityAverage = capacitySum / Constants.DYNAMICS_CYCLE + 1;
 
                 //获取当前的打印能力
                 int printerCapacity = 0;
@@ -437,12 +441,12 @@ public class Compact {
                 }
 
                 //如果当前的打印能力比所需的打印能力多2以上，则解约部分主控板
-                if (printerCapacity - capacityAverage >= 2){
+                if (printerCapacity - capacityAverage > 2){
                     Compact compact = new Compact();
                     //首先对主控板的打印能力进行升序
                     SortList<Printer> sortList = new SortList<Printer>();
                     sortList.Sort(printers, "getSpeed", "asc");
-                    while (printerCapacity - capacityAverage >= 2){
+                    while (printerCapacity - capacityAverage > 2){
                         //如果解约部分主控板后依赖大于所需打印能力，则继续解约，否则退出循环
                         if (printerCapacity - printers.get(0).getSpeed() >= capacityAverage){
                             compact.removeSign(compactNumber,printers.get(0));
@@ -452,7 +456,7 @@ public class Compact {
                     }
                 }
                 //如果所需的打印能力比当前的打印能力大于2以上，则需要再进行签约
-                if (capacityAverage - printerCapacity >= 2){
+                if (capacityAverage - printerCapacity > 2){
                     //先获得之前投标了的主控板集合
                     List<Printer> compactPrinter = ShareMem.compactPrinter.get((short)compactNumber);
                     //进行降序排序

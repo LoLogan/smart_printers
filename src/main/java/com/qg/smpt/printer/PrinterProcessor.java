@@ -369,7 +369,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     List<Order> orderList = new ArrayList<Order>();
                     for (Order order : orders) {
                         BOrder bOrder = order.orderToBOrder((short) printer.getCurrentBulk(), (short) bOrders.getbOrders().size());
-                        if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()) break;
+                        if (bOrders.getDataSize() + bOrder.size > printer.getBufferSize()/2) break;
 
                         bOrders.getbOrders().add(bOrder);
                         bOrders.getOrders().add(order);
@@ -739,6 +739,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             // todo : 此处输出是为了方便嵌入式查看，测试完后删除
             System.out.println("===========进行订单转移报文解析===========");
             bOrderStatus = BOrderStatus.bytesToOrderStatusWithRemoving(bytes);
+            bOrderStatus.toString();
             // 将报文打印出来
             System.out.println(DataUtil.byteArrayToHexStr(bytes));
             // 报文转化信息可以在debug信息中查看
@@ -784,8 +785,8 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     return;
                 }
                 // 获得对应的那份订单
-                order = bulkOrderF.getOrders().get(bOrderStatus.inNumber - 1);
-                bOrder = bulkOrderF.getbOrders().get(bOrderStatus.inNumber - 1);
+                order = bulkOrderF.getOrders().get(bOrderStatus.inNumber);
+                bOrder = bulkOrderF.getbOrders().get(bOrderStatus.inNumber);
 
                 order.setOrderStatus(String.valueOf(bOrderStatus.flag & 0xFF));  // 设置订单状态 //
 
@@ -855,6 +856,8 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             // 订单打印失败，从此订单开始批次开始转移
             // 获得批次
             bulkOrderF = bulkOrderList.get(position);
+            // 移除批次
+            bulkOrderList.remove(position);
             int size = bulkOrderF.getOrders().size();
             // 拿到需要重新打印的订单
             List<Order> orderList = new ArrayList<>();
@@ -874,7 +877,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
             // 获取需要重新打印的订单
             long time = System.currentTimeMillis();
-            for (int i=bOrderStatus.inNumber - 1, num=1; i<size; i++, num++) {
+            for (int i=bOrderStatus.inNumber, num=0; i<size; i++, num++) {
                 Order migrateOrder = bulkOrderF.getOrders().get(i);
                 BOrder bMigrateOrder = bulkOrderF.getbOrders().get(i);
 
@@ -925,9 +928,12 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 Compact compact = new Compact();
                 // 获得最高信任度打印机 id
                 int printerId = compact.getMaxCreForBulkPrinter(userId);
-                Printer agent = ShareMem.printerIdMap.get(id);
+                Printer agent = ShareMem.printerIdMap.get(printerId);
                 LOGGER.log(Level.DEBUG, "打印机id === "+printerId);
                 SocketChannel printerChannel = ShareMem.priSocketMap.get(agent);
+
+                bulkOrderList.add(bulkOrder);
+
                 if (printerChannel != null && printerChannel != socketChannel) {
                     // 直接发送到信任度最高的打印机
                     printerChannel.write(ByteBuffer.wrap(bBulkOrderByters));
@@ -986,7 +992,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
             /*  转化发送批次订单数据 */
             byte[] bBulkOrderByters = BBulkOrder.bBulkOrderToBytes(BulkOrder.convertBBulkOrder(bulkOrder, true));
-            bBulkOrderByters[15] = (byte)0x1;
+            //bBulkOrderByters[15] = (byte)0x1;
             LOGGER.log(Level.DEBUG, "打印机 [{0}] 重新发送批次异常单 当前线程 [{1}]", bOrderStatus.printerId, this.id);
 //            DebugUtil.printBytes(bBulkOrderByters);
 
