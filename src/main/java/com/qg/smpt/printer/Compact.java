@@ -214,68 +214,6 @@ public class Compact {
 
         }
 
-//        SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
-//        SqlSession sqlSession = sqlSessionFactory.openSession();
-//        compactMapper = sqlSession.getMapper(CompactMapper.class);
-//
-//        LOGGER.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审");
-//        int allOrdersNum = orders.size();
-//
-//        double sumPrice = 0;
-//        for (Printer printer : printers){
-//            sumPrice += printer.getPrice();
-//        }
-//        //总代价为0说明当前主控板下无打印机连接 无法进行打印任务
-//        if (sumPrice==0) return;
-//        int pos = 0;
-//        int seq = 1;
-//
-//        for (Printer printer : printers){
-//            sqlSession = sqlSessionFactory.openSession();
-//            compactMapper = sqlSession.getMapper(CompactMapper.class);
-//            double orderNumOfDouble =  (printer.getPrice() / sumPrice * allOrdersNum);
-//            int orderNumber = new BigDecimal(orderNumOfDouble).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
-//
-//            List<Order> smallOrders = orders.subList(pos,pos+orderNumber);    //截取一个小批次
-//            pos += orderNumber;
-//            BulkOrder bOrders = ordersToBulk(smallOrders,printer);       //组装一个批次
-//            printer.increaseBulkId();                                    //打印机打印批次加一
-//            bOrders.setId(printer.getCurrentBulk());                     //设置当前批次编号，即该批次是上述打印机对应的第几个打印批次
-//
-//
-//            synchronized (ShareMem.priBulkMap) {
-//                ShareMem.priBulkMap.put(printer,bOrders);
-//            }
-//
-//            //构建合同网中标报文
-//            CompactModel compactModel = new CompactModel();
-//            compactModel.setType(BConstants.winABid);
-//            compactModel.setUrg((byte) urg);
-//            compactModel.setCompactNumber((short) compactNumber);
-//            compactModel.setCheckSum((short)0);
-////            compactModel.setSeq((short) seq);
-////            compactModel.setOrderNumber((short) smallOrders.size());
-//            compactModel.setId(printer.getId());
-//            //记录在数据库中 // TODO: 2017/11/16
-//            try {
-//                compactMapper.addCompact(compactModel);
-//            }finally {
-//                sqlSession.commit();
-//                sqlSession.close();
-//            }
-//
-//            byte[] compactBytes = CompactModel.compactToBytes(compactModel);
-//
-//            SocketChannel socketChannel = ShareMem.priSocketMap.get(printer);
-//            try {
-//                socketChannel.write(ByteBuffer.wrap(compactBytes));
-//                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文,分配订单个数为[{1}]",printer.getId(),smallOrders.size());
-//            } catch (IOException e) {
-//                LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
-//            }
-//            seq++;
-//        }
-
         return;
 
     }
@@ -441,12 +379,12 @@ public class Compact {
                 }
 
                 //如果当前的打印能力比所需的打印能力多2以上，则解约部分主控板
-                if (printerCapacity - capacityAverage > 2){
+                if (printerCapacity - capacityAverage >= 2){
                     Compact compact = new Compact();
                     //首先对主控板的打印能力进行升序
                     SortList<Printer> sortList = new SortList<Printer>();
                     sortList.Sort(printers, "getSpeed", "asc");
-                    while (printerCapacity - capacityAverage > 2){
+                    while (printerCapacity - capacityAverage >= 2){
                         //如果解约部分主控板后依赖大于所需打印能力，则继续解约，否则退出循环
                         if (printerCapacity - printers.get(0).getSpeed() >= capacityAverage){
                             compact.removeSign(compactNumber,printers.get(0));
@@ -534,7 +472,7 @@ public class Compact {
 
                     BBulkOrder bBulkOrder = BulkOrder.convertBBulkOrder(bOrders, false);
                     byte[] bBulkOrderBytes = BBulkOrder.bBulkOrderToBytes(bBulkOrder);
-                    DebugUtil.printBytes(bBulkOrderBytes);
+
                     socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
                 } catch (IOException e) {
                 }

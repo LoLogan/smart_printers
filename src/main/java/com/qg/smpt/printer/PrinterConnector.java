@@ -164,6 +164,10 @@ public class PrinterConnector implements Runnable, Lifecycle{
                             }
                             byteBuffer.flip();
 
+                            byte[] bytes = byteBuffer.array();
+                            if (bytes[0] == (byte)0xCF && bytes[1] == (byte)0xFC && bytes[2] == (byte)BConstants.okStatus)
+                                LOGGER.log(Level.DEBUG, "==================阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值=======================");
+
                             LOGGER.log(Level.DEBUG, "SocketChannel [{0}}",key.channel().toString());
                             PrinterProcessor processor = createProcessor();
                             processor.assign((SocketChannel)key.channel(), byteBuffer);
