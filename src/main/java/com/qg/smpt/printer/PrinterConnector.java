@@ -23,6 +23,7 @@ import java.util.*;
  */
 public class PrinterConnector implements Runnable, Lifecycle{
 
+    private final static Logger LOGGER_COMPACT = Logger.getLogger("compact");
     private static final Logger LOGGER = Logger.getLogger(PrinterConnector.class.getName());
 
     private String address = null;
@@ -166,7 +167,7 @@ public class PrinterConnector implements Runnable, Lifecycle{
 
                             byte[] bytes = byteBuffer.array();
                             if (bytes[0] == (byte)0xCF && bytes[1] == (byte)0xFC && bytes[2] == (byte)BConstants.okStatus)
-                                LOGGER.log(Level.DEBUG, "==================阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值=======================");
+                                LOGGER_COMPACT.log(Level.DEBUG, "==================阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值阈值=======================");
 
                             LOGGER.log(Level.DEBUG, "SocketChannel [{0}}",key.channel().toString());
                             PrinterProcessor processor = createProcessor();

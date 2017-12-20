@@ -36,7 +36,7 @@ import static com.qg.smpt.share.ShareMem.priSentQueueMap;
  * 打印机的线程调度：将缓存队列中数据组装并发送到给打印机，将缓存队列转发到已发队列
  */
 public class PrinterProcessor implements Runnable, Lifecycle{
-
+    private final static Logger LOGGER_COMPACT = Logger.getLogger("compact");
     private final Logger LOGGER = Logger.getLogger(PrinterProcessor.class);
 
     private Thread thread = null;
@@ -239,7 +239,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     parseConnectStatus(bytes, socketChannel);
                     break;
                 case BConstants.okStatus:
-                    LOGGER.log(Level.DEBUG, "打印机 发送过来可以请求数据 thread [{0}] ", this.getId());
+                    LOGGER_COMPACT.log(Level.DEBUG, "打印机 发送过来可以请求数据 thread [{0}] ", this.getId());
                     parseOkStatus(bytes, socketChannel);
                     break;
                 case BConstants.orderStatus:
@@ -263,15 +263,15 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             DebugUtil.printBytes(bytes);
             switch (bytes[2]) {
                 case BConstants.bid :
-                    LOGGER.log(Level.DEBUG, "[投标]主控板进行投标，服务器对标书进行筛选，处理线程 thread [{0}]", this.getId());
+                    LOGGER_COMPACT.log(Level.DEBUG, "[投标]主控板进行投标，服务器对标书进行筛选，处理线程 thread [{0}]", this.getId());
                     parseBid(bytes, socketChannel);
                     break;
                 case BConstants.sign :
-                    LOGGER.log(Level.DEBUG, "[签约]收到主控板的签约，处理线程 thread [{0}]", this.getId());
+                    LOGGER_COMPACT.log(Level.DEBUG, "[签约]收到主控板的签约，处理线程 thread [{0}]", this.getId());
                     sign(bytes, socketChannel);
                     break;
                 case BConstants.removeSign :
-                    LOGGER.log(Level.DEBUG, "[确认解约]收到主控板的确认解约，处理线程 thread [{0}]", this.getId());
+                    LOGGER_COMPACT.log(Level.DEBUG, "[确认解约]收到主控板的确认解约，处理线程 thread [{0}]", this.getId());
                     removeSign(bytes);
             }
 
@@ -330,7 +330,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             printers.add(printer);
         }
 
-        LOGGER.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书，打印速度为[{1}]，健康状态[{3}]，计算信任度[{2}]", compactModel.getId(),compactModel.getSpeed(),credibility,compactModel.getHealth());
+        LOGGER_COMPACT.log(Level.DEBUG, "[投标]收到主控板[{0}]的标书，打印速度为[{1}]，健康状态[{3}]，计算信任度[{2}]", compactModel.getId(),compactModel.getSpeed(),credibility,compactModel.getHealth());
 
 
         SqlSessionFactory sqlSessionFactory = SqlSessionFactoryBuild.getSqlSessionFactory();
@@ -353,7 +353,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
     private synchronized void sign(byte[] bytes, SocketChannel socketChannel){
 
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
-        LOGGER.log(Level.DEBUG, "[签约确认]收到主控板[{0}]的签约确认，准备向其发送订单数据", compactModel.getId());
+        LOGGER_COMPACT.log(Level.DEBUG, "[签约确认]收到主控板[{0}]的签约确认，准备向其发送订单数据", compactModel.getId());
         Printer printer = ShareMem.printerIdMap.get(compactModel.getId());
         printer.setCanAccept(true);
         //如果都主控板都解约了，则不需要继续进行订单的下发了 //
@@ -385,7 +385,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     }
                     orders.removeAll(orderList);
                 }
-                LOGGER.log(Level.DEBUG, "为打印机 [{0}] 分配任务, 合同网订单缓冲队列 [{1}]，" +
+                LOGGER_COMPACT.log(Level.DEBUG, "为打印机 [{0}] 分配任务, 合同网订单缓冲队列 [{1}]，" +
                                 "批次号为 [{2}], 最后批次订单容量 [{3}] byte", printer.getId(),
                         orders.size(), bOrders.getId(), bOrders.getDataSize());
 
@@ -407,32 +407,20 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
                 try {
                     socketChannel.write(ByteBuffer.wrap(bBulkOrderBytes));
-                    LOGGER.log(Level.DEBUG, "[确认签约]发放任务时成功");
+                    LOGGER_COMPACT.log(Level.DEBUG, "[确认签约]发放任务时成功");
                 } catch (final IOException e) {
-                    LOGGER.log(Level.ERROR, "[确认签约]发放任务时发生错误");
+                    LOGGER_COMPACT.log(Level.ERROR, "[确认签约]发放任务时发生错误");
                 }
 //                }
-                LOGGER.log(Level.DEBUG, "[发放任务]主控板[{0}]不可接受新数据，进入睡眠",printer.getId());
+                LOGGER_COMPACT.log(Level.DEBUG, "[发放任务]主控板[{0}]不可接受新数据，进入睡眠",printer.getId());
                 printer.setCanAccept(false);
                 try {
                     printer.wait();
-                    LOGGER.log(Level.DEBUG, "[发放任务]唤醒，继续发送订单");
+                    LOGGER_COMPACT.log(Level.DEBUG, "[发放任务]唤醒，继续发送订单");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-
-//                //进入睡眠，
-//                synchronized (printer) {
-//                    try {
-//                        printer.wait();
-//                        LOGGER.log(Level.DEBUG, "[发放任务]发放任务时成功，进入睡眠");
-//                        flag = 1;
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//                LOGGER.log(Level.DEBUG, "[发放任务]唤醒，继续发送订单");
 
         }
     }
@@ -578,8 +566,8 @@ public class PrinterProcessor implements Runnable, Lifecycle{
         // 获取打印机主控板id,获取打印机
         int printerId = request.printerId;
 
-        LOGGER.log(Level.DEBUG, "------------------------------阈值请求----------------------------------------------" );
-        LOGGER.log(Level.DEBUG, "解析请求打印机请求id:[{0}], flag:[{1}]," +
+        LOGGER_COMPACT.log(Level.DEBUG, "------------------------------阈值请求----------------------------------------------" );
+        LOGGER_COMPACT.log(Level.DEBUG, "解析请求打印机请求id:[{0}], flag:[{1}]," +
                         "seconds:[{2}];checksum [{3}]; 当前线程 [{4}]" , request.printerId, request.flag, request.seconds,
                 request.checkSum, this.id);
 
@@ -591,7 +579,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 e.printStackTrace();
             }
             if (p == null) {
-                LOGGER.log(Level.ERROR, "共享内存中并未找到打印机id[{0}]对应printer对象 当前线程 [{1}]", printerId, this.id);
+                LOGGER_COMPACT.log(Level.ERROR, "共享内存中并未找到打印机id[{0}]对应printer对象 当前线程 [{1}]", printerId, this.id);
                 return;
             }
         }

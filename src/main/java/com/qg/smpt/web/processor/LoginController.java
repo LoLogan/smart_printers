@@ -7,7 +7,7 @@ import javax.servlet.http.HttpSession;
 
 import com.qg.smpt.printer.OrdersDispatcher;
 import com.qg.smpt.web.model.Order;
-import com.sun.deploy.net.HttpResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -93,11 +93,11 @@ public class LoginController {
 			}
 
 			//给用户订单委派器，用于循环查看当前的订单存量,直到session为止
-			OrdersDispatcher ordersDispatcher = new OrdersDispatcher(loginUser.getId());
-			ordersDispatcher.threadStart();
+//			OrdersDispatcher ordersDispatcher = new OrdersDispatcher(loginUser.getId());
+//			ordersDispatcher.threadStart();
 			List<Order> orders = new ArrayList<>();
 			ShareMem.userOrderBufferMap.put(loginUser.getId(), orders);
-			ShareMem.userIdOrdersDispatcher.put(loginUser.getId(),ordersDispatcher);
+//			ShareMem.userIdOrdersDispatcher.put(loginUser.getId(),ordersDispatcher);
 
 			Cookie cookie = new Cookie("user_id", loginUser.getId().toString());
 			cookie.setPath("/");

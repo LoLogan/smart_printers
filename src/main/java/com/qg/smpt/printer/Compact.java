@@ -37,8 +37,8 @@ public class Compact {
     private CompactMapper compactMapper;
 
 
-
-    private final Logger LOGGER = Logger.getLogger(PrinterProcessor.class);
+    private final static Logger LOGGER_COMPACT = Logger.getLogger("compact");
+    private final Logger LOGGER = Logger.getLogger(Compact.class);
 
 
     public static int capacitySum = 0;      //用于动态调控主控板时记录5次所需的打印能力的总和，以便求平均值
@@ -80,7 +80,7 @@ public class Compact {
         try {
             sleep(2000);
         } catch (InterruptedException e) {
-            LOGGER.log(Level.DEBUG, "[招标]等待投标时出现了错误");
+            LOGGER_COMPACT.log(Level.DEBUG, "[招标]等待投标时出现了错误");
         }
 
         if (ShareMem.compactPrinter.get((short)compactNumber).size() == 0) return -1 ;
@@ -105,9 +105,9 @@ public class Compact {
         SocketChannel socketChannel = ShareMem.priSocketMap.get(ShareMem.printerIdMap.get(printer.getId()));
         try {
             socketChannel.write(ByteBuffer.wrap(compactBytes));
-            LOGGER.log(Level.DEBUG, "[解约]成功向主控板[{0}]发送合同网解约报文",printer.getId());
+            LOGGER_COMPACT.log(Level.DEBUG, "[解约]成功向主控板[{0}]发送合同网解约报文",printer.getId());
         } catch (IOException e) {
-            LOGGER.log(Level.ERROR, "[解约]发送合同网解约报文发生错误");
+            LOGGER_COMPACT.log(Level.ERROR, "[解约]发送合同网解约报文发生错误");
         }
 
     }
@@ -138,25 +138,25 @@ public class Compact {
 
         byte[] compactBytes = CompactModel.compactToBytes(compactModel);
 
-        LOGGER.log(Level.ERROR, "----------------------[招标]合同网报文字节开始----------------------");
+        LOGGER_COMPACT.log(Level.ERROR, "----------------------[招标]合同网报文字节开始----------------------");
         DebugUtil.printBytes(compactBytes);
-        LOGGER.log(Level.ERROR, "----------------------[招标]合同网报文字节结束-----------------------");
+        LOGGER_COMPACT.log(Level.ERROR, "----------------------[招标]合同网报文字节结束-----------------------");
 
         if (compactBytes.length % 4 != 0) {
-            LOGGER.log(Level.ERROR, "[招标]合同网报文字节并未对齐");
+            LOGGER_COMPACT.log(Level.ERROR, "[招标]合同网报文字节并未对齐");
         }
 
 
-        LOGGER.log(Level.DEBUG, "[招标]向主控板发送招标合同网报文");
+        LOGGER_COMPACT.log(Level.DEBUG, "[招标]向主控板发送招标合同网报文");
         for (Map.Entry<Printer, SocketChannel> entry : ShareMem.priSocketMap.entrySet()){
             //当该主控板处于闲时状态时可向其发送合同网报文
             if (!entry.getKey().isBusy() && entry.getKey().getUserId()==userId) {
                 try {
                     ByteBuffer byteBuffer = ByteBuffer.wrap(compactBytes);
                     entry.getValue().write(byteBuffer);
-                    LOGGER.log(Level.DEBUG, "[招标]成功向主控板[{0}]发送合同网报文",entry.getKey().getId());
+                    LOGGER_COMPACT.log(Level.DEBUG, "[招标]成功向主控板[{0}]发送合同网报文",entry.getKey().getId());
                 } catch (IOException e) {
-                    LOGGER.log(Level.ERROR, "[招标]发送合同网报文发生错误");
+                    LOGGER_COMPACT.log(Level.ERROR, "[招标]发送合同网报文发生错误");
                 }
             }
         }
@@ -167,7 +167,7 @@ public class Compact {
      * 进行标书的评审和中标操作
      */
     public void judge(List<Order> orders,int urg,int compactNumber, int printerCapacity){
-        LOGGER.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审并对进行投标的打印机进行筛选");
+        LOGGER_COMPACT.log(Level.DEBUG, "[标书评审]主控板已响应标书，开始进行标书评审并对进行投标的打印机进行筛选");
         List<Printer> printers = ShareMem.compactPrinter.get((short)compactNumber);
         //进行信任度的降序排序
         SortList<Printer> sortList = new SortList<Printer>();
@@ -207,9 +207,9 @@ public class Compact {
             SocketChannel socketChannel = ShareMem.priSocketMap.get(p);
             try {
                 socketChannel.write(ByteBuffer.wrap(compactBytes));
-                LOGGER.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文",p.getId());
+                LOGGER_COMPACT.log(Level.DEBUG, "[中标]成功向主控板[{0}]发送合同网报文",p.getId());
             } catch (IOException e) {
-                LOGGER.log(Level.ERROR, "[中标]发送合同网报文发生错误");
+                LOGGER_COMPACT.log(Level.ERROR, "[中标]发送合同网报文发生错误");
             }
 
         }
@@ -272,7 +272,7 @@ public class Compact {
      */
     public void sendBulkDitectly(int userId,int urg,List<Order> orders){
         updatePrinterMsg(userId);
-        LOGGER.log(Level.DEBUG, "[直接批次下单]直接发送批次订单数据");
+        LOGGER_COMPACT.log(Level.DEBUG, "[直接批次下单]直接发送批次订单数据");
         int printerId = getPrinterIdByMaxCreForBulk(userId);                //获取信任度最大的打印机编号
         this.sendByPrinter(printerId,orders);
     }

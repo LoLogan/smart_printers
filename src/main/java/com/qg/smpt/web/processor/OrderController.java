@@ -36,13 +36,14 @@ import com.qg.smpt.web.model.Printer;
 import com.qg.smpt.web.model.User;
 import com.qg.smpt.web.service.OrderService;
 import com.qg.smpt.web.service.UserService;
-import com.sun.org.apache.xpath.internal.operations.Or;
+
 
 
 @Controller
 @RequestMapping("/order")
 public class OrderController {
 	private static final Logger LOGGER = Logger.getLogger(OrderController.class);
+	private final static Logger LOGGER_COMPACT = Logger.getLogger("compact");
 
 	@Autowired
 	private OrderService orderService;
@@ -109,7 +110,7 @@ public class OrderController {
 		}
 
 
-		LOGGER.log(Level.DEBUG, "新接受的订单数目为：[{0}]", order.size());
+		LOGGER_COMPACT.log(Level.DEBUG, "新接受的订单数目为：[{0}]", order.size());
 
 		OrdersDispatcher ordersDispatcher = ShareMem.userIdOrdersDispatcher.get(userId);
 		if (ordersDispatcher == null){

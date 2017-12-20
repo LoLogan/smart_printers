@@ -157,9 +157,9 @@ public class TestOrderController {
 		System.out.println(order.toString());
 	}
 
-	@Test
-	public void testSearchOrder() {
-		System.out.println(orderController.searchOrder(1,1));
-	}
+//	@Test
+//	public void testSearchOrder() {
+//		System.out.println(orderController.searchOrder(1,1));
+//	}
 
 }
