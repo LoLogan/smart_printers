@@ -31,6 +31,27 @@ public class User {
 
     private boolean compact;
 
+    // 标记用户打印机连续打错次数
+    private int errorNum;
+
+    public int getErrorNum() {
+        return errorNum;
+    }
+
+    /**
+     * 出错次数 +1
+     */
+    public void increaseErrorNum() {
+        this.errorNum++;
+    }
+
+    /**
+     * 重置出错次数
+     */
+    public void resetErrorNum() {
+        this.errorNum = 0;
+    }
+
     public boolean isCompact() {
         return compact;
     }

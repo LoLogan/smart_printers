@@ -727,9 +727,9 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             // todo : 此处输出是为了方便嵌入式查看，测试完后删除
             System.out.println("===========进行订单转移报文解析===========");
             bOrderStatus = BOrderStatus.bytesToOrderStatusWithRemoving(bytes);
-            bOrderStatus.toString();
             // 将报文打印出来
             System.out.println(DataUtil.byteArrayToHexStr(bytes));
+            System.out.println("转移报文信息 : " + bOrderStatus.toString());
             // 报文转化信息可以在debug信息中查看
             System.out.println("===========订单转移报文解析完成===========");
         } else {
@@ -791,13 +791,15 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     case BConstants.orderFail :
                         order.setPrintResultTime(time);
                         synchronized (printer) {
-                            printer.setPrintErrorNum(printer.getPrintErrorNum() + 1);
+                            // 失败订单加一
+                            printer.increaseErrorNum(1);
                         }
                         break;
 
                     case BConstants.orderSucc :
                         synchronized (printer) {
-                            printer.setPrintSuccessNum(printer.getPrintErrorNum() + 1);
+                            // 成功订单加一
+                            printer.increaseSuccessNum(1);
                         }
                         order.setPrintResultTime(time);
                         break;
@@ -811,7 +813,13 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                         break;
 
                     case BConstants.orderMigrate:
-                        // 批次转移，针对整个批次，无需处理
+                        // todo 订单转移导致打印机的失败订单数+1，这个具体数值可能需要重新确定
+                        synchronized (printer) {
+                            printer.increaseErrorNum(1);
+                            // 重新计算信任度
+                            printer.setCre((BConstants.initialCre + BConstants.alpha * printer.getPrintSuccessNum()
+                                    - BConstants.beta * printer.getPrintErrorNum()));
+                        }
                         break;
 
                     case BConstants.orderExcep:
@@ -838,9 +846,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
         /* 失败 重发数据*/
         if (flag == BConstants.orderMigrate) {
-            // todo : 该部分未与硬件端进行测试，此句测试后删除！
-            // todo:考虑打印机报文问题！！！
-
             // 订单打印失败，从此订单开始批次开始转移
             // 获得批次
             bulkOrderF = bulkOrderList.get(position);
@@ -854,7 +859,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             int totalSize = 0;
 
             /* 组装批次订单 */
-            BulkOrder bulkOrder = new BulkOrder(new ArrayList<BOrder>());
+            BulkOrder bulkOrder = new BulkOrder(new ArrayList<>());
 
             // 加急处理设置
             bulkOrder.setBulkType((short) 1);
@@ -873,7 +878,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 migrateOrder.setExecEnterQueueTime(time);
                 migrateOrder.setExecSendTime(time);
                 migrateOrder.setOrderStatus(Integer.valueOf(flag).toString());
-                // todo 判断该次要求重发的订单是否是故意封装错误的订单，如果是重新封装成正确的订单
+                // 判断该次要求重发的订单是否是故意封装错误的订单，如果是重新封装成正确的订单
                 if(migrateOrder.getIndexError() >= 0 && migrateOrder.getIndexError() < 3) {
                     migrateOrder.setIndexError(4);
                 }
@@ -881,7 +886,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 orderList.add(migrateOrder);
                 bOrderList.add(migrateOrder.orderToBOrder( (short) (bulkOrder.getId()), (short) num ) );
             }
-            LOGGER.log(Level.INFO, "================================================================================");
             LOGGER.log(Level.INFO, "打印机 [{0}] 打印订单 (订单批次号 [{1}], 批次内序号 [{2}]) 开始进行批次转移, 当前线程 [{3}], 当前时间为 [{4}]," +
                             " 离发送订单相差的时间为 [{5}]",
                     bOrderStatus.printerId, bOrderStatus.bulkId, bOrderStatus.inNumber, this.id,
@@ -907,11 +911,8 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 if (userId == null) {
                     LOGGER.log(Level.INFO, "打印机 [{0}] 发送错误主控板Id[{1}] 当前线程 [{2}]", bOrderStatus.printerId, position,this.id);
                     userId = -1;
+                    return;
                 }
-                // todo:这里用户id可能发生数据不同步的情况
-                // 另外一种方法：从缓存中提取用户id，通过用户缓存集合 userIdMap 遍历所有用户的 User 中的打印机列表
-                // 从而确定打印机用户id
-
                 // 将批次订单转移到信任度最高的anget
                 Compact compact = new Compact();
                 // 获得最高信任度打印机 id
@@ -922,10 +923,24 @@ public class PrinterProcessor implements Runnable, Lifecycle{
 
                 bulkOrderList.add(bulkOrder);
 
+                // todo 考虑到在于打印机单方面测试时，用户可能没有登录，暂时注释这部分，同时这部分3次连续出错的策略有点傻
+
+//                User user = ShareMem.userIdMap.get(userId);
+//                if (user == null) {
+//                    LOGGER.log(Level.WARN, "用户 {0} 不存在！", userId);
+//                    return;
+//                }
+
                 if (printerChannel != null && printerChannel != socketChannel) {
+                    // 重置打印机出错次数
+//                    user.resetErrorNum();
                     // 直接发送到信任度最高的打印机
                     printerChannel.write(ByteBuffer.wrap(bBulkOrderByters));
                 } else {
+//                    user.increaseErrorNum();
+//                    if (user.getErrorNum() == 3) {
+//                        return;
+//                    }
                     // 如果找不到打印机或者只有一台打印机的情况，直接按照原路返回
                     socketChannel.write(ByteBuffer.wrap(bBulkOrderByters));
                 }
@@ -937,7 +952,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                 sqlSession.commit();
                 sqlSession.close();
             }
-
 
             long resendTime = System.currentTimeMillis();
             LOGGER.log(Level.INFO, "打印机 [{0}] 转移发送批次 [{1}] 中的异常订单 [{2}] ，当前时间为 [{3}] 距离接受到异常报告时" +
