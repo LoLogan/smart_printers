@@ -744,12 +744,6 @@ public class PrinterProcessor implements Runnable, Lifecycle{
             System.out.println("转移报文信息 : " + bOrderStatus.toString());
             // 报文转化信息可以在debug信息中查看
             System.out.println("===========订单转移报文解析完成===========");
-
-            // 减低信任度
-            Printer errorPrinter = ShareMem.printerIdMap.get(bOrderStatus.printerId);
-            errorPrinter.setPrintErrorNum(errorPrinter.getPrintErrorNum() - 1);
-            errorPrinter.setCre((BConstants.initialCre + BConstants.alpha * errorPrinter.getPrintSuccessNum()
-                    - BConstants.beta * errorPrinter.getPrintErrorNum()));
         } else {
             // 否则就按照状态报文20字节解析
             bOrderStatus = BOrderStatus.bytesToOrderStatus(bytes);
@@ -809,13 +803,15 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                     case BConstants.orderFail :
                         order.setPrintResultTime(time);
                         synchronized (printer) {
-                            printer.setPrintErrorNum(printer.getPrintErrorNum() + 1);
+                            // 失败订单加一
+                            printer.increaseErrorNum(1);
                         }
                         break;
 
                     case BConstants.orderSucc :
                         synchronized (printer) {
-                            printer.setPrintSuccessNum(printer.getPrintErrorNum() + 1);
+                            // 成功订单加一
+                            printer.increaseSuccessNum(1);
                         }
                         order.setPrintResultTime(time);
                         break;
@@ -829,7 +825,13 @@ public class PrinterProcessor implements Runnable, Lifecycle{
                         break;
 
                     case BConstants.orderMigrate:
-                        // 批次转移，针对整个批次，无需处理
+                        // todo 订单转移导致打印机的失败订单数+1，这个具体数值可能需要重新确定
+                        synchronized (printer) {
+                            printer.increaseErrorNum(1);
+                            // 重新计算信任度
+                            printer.setCre((BConstants.initialCre + BConstants.alpha * printer.getPrintSuccessNum()
+                                    - BConstants.beta * printer.getPrintErrorNum()));
+                        }
                         break;
 
                     case BConstants.orderExcep:

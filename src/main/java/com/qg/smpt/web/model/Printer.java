@@ -118,6 +118,32 @@ public final class Printer {
     public Printer() {this.currentBulk = 0;}
     public Printer(int id){this.id = id;this.currentBulk = 0;}
 
+    public void increaseErrorNum(int num) {
+        this.printErrorNum += num;
+    }
+
+    public void decreaseErrorNum(int num) {
+        synchronized (this) {
+            this.printErrorNum -= num;
+            if (this.printErrorNum < 0) {
+                this.printErrorNum = 0;
+            }
+        }
+    }
+
+    public void increaseSuccessNum(int num) {
+        this.printSuccessNum += num;
+    }
+
+    public void decreaseSuccessNum(int num) {
+        synchronized (this) {
+            this.printSuccessNum -= num;
+            if (this.printSuccessNum < 0) {
+                this.printSuccessNum = 0;
+            }
+        }
+    }
+
     @Override
     public boolean equals(Object obj) {
         if(obj == this)
