@@ -367,6 +367,7 @@ public class Compact {
                 capacitySum += printerCapacityNeed;     //累加 求平均值
 
                 capacityRecord++;
+                LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]当前计算所需打印能力为[{0}],合计打印能力为[{1}],第[{2}]周期",printerCapacityNeed,capacitySum,capacityRecord);
             } else {
                 int capacityAverage = 0;
                 if (capacitySum!=0)
@@ -377,7 +378,7 @@ public class Compact {
                 for (Printer p : printers) {
                     printerCapacity += p.getSpeed();
                 }
-
+                LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]周期为[{0}]的平均打印能力为[{1}],当前打印能力总计有[{2}]",capacityRecord,capacityAverage,printerCapacity);
                 //如果当前的打印能力比所需的打印能力多2以上，则解约部分主控板
                 if (printerCapacity - capacityAverage >= 2){
                     Compact compact = new Compact();
@@ -387,9 +388,9 @@ public class Compact {
                     while (printerCapacity - capacityAverage >= 2){
                         //如果解约部分主控板后依赖大于所需打印能力，则继续解约，否则退出循环
                         if (printerCapacity - printers.get(0).getSpeed() >= capacityAverage){
-                            compact.removeSign(compactNumber,printers.get(0));
                             printerCapacity = printerCapacity - printers.get(0).getSpeed();
-//                            printers.remove(0);
+                            LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]与主控板[{0}]解约,当前打印能力总计有[{1}]",printers.get(0).getId(),printerCapacity);
+                            compact.removeSign(compactNumber,printers.get(0));
                         }else break;
                     }
                 }
@@ -408,7 +409,7 @@ public class Compact {
                         if (printers.contains(p)) continue;
                         printers.add(p);
                         printerCapacity += p.getSpeed();
-
+                        LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]与主控板[{0}]签约,当前打印能力总计有[{1}]",p.getId(),printerCapacity);
                         CompactModel compactModel = new CompactModel();
                         compactModel.setType(BConstants.winABid);
                         compactModel.setCompactNumber((short) compactNumber);

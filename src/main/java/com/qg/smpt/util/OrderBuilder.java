@@ -116,10 +116,17 @@ public class OrderBuilder {
 		order.setOrderStatus(Integer.valueOf(BConstants.orderWait).toString());
 
 		//生成菜
-		randomNum = getRandom(5) + 1;
+//		randomNum = getRandom(5) + 1;
+		randomNum = 1;
 		List<Item> items = new ArrayList<Item>(randomNum);
 		for(int i = 0; i < randomNum; i++){
-			items.add(createItem(i));
+
+			int a = getRandom(10) + 1;
+			if (a%2==0) a = 20;
+			else a = 1;
+			for (int b = 0; b < a; b++)
+					items.add(createItem(i));
+
 		}
 		order.setItems(items);
 		

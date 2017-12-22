@@ -287,6 +287,7 @@ public class PrinterProcessor implements Runnable, Lifecycle{
      */
     private void removeSign(byte[] bytes){
         CompactModel compactModel = CompactModel.bytesToCompact(bytes);
+        LOGGER_COMPACT.log(Level.DEBUG, "[确认解约]与主控板 [{0}]确认解约", compactModel.getId());
         synchronized (ShareMem.compactOfPrinter) {
             List<Printer> printers = ShareMem.compactOfPrinter.get(compactModel.getCompactNumber());
             Printer p = ShareMem.printerIdMap.get(compactModel.getId());
