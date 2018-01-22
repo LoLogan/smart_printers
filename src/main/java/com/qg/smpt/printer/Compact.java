@@ -43,7 +43,7 @@ public class Compact {
 
     public static int capacitySum = 0;      //用于动态调控主控板时记录5次所需的打印能力的总和，以便求平均值
 
-    public static int capacityRecord = 1;           //用于记录当前是一个周期中的第几次求当前打印能力
+    public static int capacityRecord = 0;           //用于记录当前是一个周期中的第几次求当前打印能力
 
 
 
@@ -367,7 +367,8 @@ public class Compact {
                 capacitySum += printerCapacityNeed;     //累加 求平均值
 
                 capacityRecord++;
-                LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]当前计算所需打印能力为[{0}],合计打印能力为[{1}],第[{2}]周期",printerCapacityNeed,capacitySum,capacityRecord);
+                if (compactOrders.size()!=0)
+                 LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]当前计算所需打印能力为[{0}],合计打印能力为[{1}],第[{2}]周期",printerCapacityNeed,capacitySum,capacityRecord);
             } else {
                 int capacityAverage = 0;
                 if (capacitySum!=0)
@@ -378,7 +379,16 @@ public class Compact {
                 for (Printer p : printers) {
                     printerCapacity += p.getSpeed();
                 }
-                LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]周期为[{0}]的平均打印能力为[{1}],当前打印能力总计有[{2}]",capacityRecord,capacityAverage,printerCapacity);
+                if (capacityAverage!=0)
+                    LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]周期为[{0}]的平均打印能力为[{1}],当前打印能力总计有[{2}]",capacityRecord,capacityAverage,printerCapacity);
+                //如果平均打印能力为0，解约全部主控板
+                if (capacityAverage == 0){
+                    Compact compact = new Compact();
+                    for (Printer p : printers) {
+                        compact.removeSign(compactNumber, printers.get(0));
+                        LOGGER_COMPACT.log(Level.DEBUG, "[动态监测]当前平均打印能力为0，与主控板[{0}]解约,", p.getId());
+                    }
+                }
                 //如果当前的打印能力比所需的打印能力多2以上，则解约部分主控板
                 if (printerCapacity - capacityAverage >= 2){
                     Compact compact = new Compact();
@@ -424,7 +434,7 @@ public class Compact {
                         }
                     }
                 }
-                capacityRecord = 1;     //重置
+                capacityRecord = 0;     //重置
                 capacitySum = 0;
             }
 
